@@ -1,1 +1,1 @@
-{"name":"mjinii-life","version":"1.0.0","scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"dependencies":{"vite":"^5.0.0"}}
+{"name":"mjinii-life","version":"1.0.0","scripts":{"dev":"vite","build":"vite build","preview":"vite preview","serve":"python -m http.server 8088 --bind 127.0.0.1","test":"node tests/smoke.mjs && node tests/dom.mjs && node tests/wiring.mjs"},"dependencies":{"vite":"^5.0.0"}}
