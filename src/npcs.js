@@ -1,4 +1,4 @@
-// src/npcs.js — interactive NPC system: relationships, visits, gifts, perks, events
+// src/npcs.js — interactive NPC system: relationships, visits, gifts, perks, decay
 import { state } from './state.js';
 import { npcs, gifts } from './content.js';
 
@@ -10,8 +10,13 @@ export const TIERS = [
 ];
 
 export const VISIT_ENERGY = 8;
+// Neglect: a warning a couple of days before anything is taken away.
+export const MISS_HINT_DAYS = 5;
+export const DECAY_AFTER_DAYS = 7;
+export const DECAY_PER_WEEK = 3;
 
 export const clampRel = v => Math.max(0, Math.min(100, Math.round(v)));
+const refuse = text => ({ text, kind: 'info', refused: true });
 
 export function tierOf(rel) {
   return TIERS.find(t => rel >= t.min) || TIERS[TIERS.length - 1];
@@ -22,7 +27,7 @@ export function getGift(id) { return gifts.find(g => g.id === id); }
 
 export function npcState(id) {
   if (!state.npcs) state.npcs = {};
-  if (!state.npcs[id]) state.npcs[id] = { rel: 10, lastVisit: 0, lastGift: 0 };
+  if (!state.npcs[id]) state.npcs[id] = { rel: 10, lastVisit: 0, lastGift: 0, lastContact: 0 };
   return state.npcs[id];
 }
 
@@ -31,6 +36,38 @@ export function tierKeyOf(id) { return tierOf(npcState(id).rel).key; }
 
 export function visitedToday(id) { return npcState(id).lastVisit === state.day; }
 export function giftedToday(id) { return npcState(id).lastGift === state.day; }
+
+export function daysSinceContact(id, s = state) {
+  const last = npcState(id).lastContact || 0;
+  if (!last) return 0;                 // never contacted: nothing to neglect yet
+  return Math.max(0, s.day - last);
+}
+
+// Shown on the card and in the visit line, before any relationship is lost.
+export function missHint(id, s = state) {
+  const d = daysSinceContact(id, s);
+  if (d >= MISS_HINT_DAYS && d < DECAY_AFTER_DAYS) return `${getNpc(id)?.name} has not heard from you in a while.`;
+  return null;
+}
+
+// Applied on day advance. One drop per elapsed week, not per day.
+export function applyDecay(s = state) {
+  const lines = [];
+  npcs.forEach(n => {
+    const e = npcState(n.id);
+    if (!e.lastContact) return;                 // never met: no relationship to lose
+    const since = s.day - e.lastContact;
+    if (since < DECAY_AFTER_DAYS) return;
+    const weeks = Math.floor(since / DECAY_AFTER_DAYS);
+    const before = e.rel;
+    e.rel = clampRel(e.rel - DECAY_PER_WEEK * weeks);
+    e.lastContact = s.day;                      // restart the clock
+    if (e.rel < before) {
+      lines.push({ text: `${n.name} has gone quiet on you — relationship -${before - e.rel}. Visit before it drifts further.`, kind: 'event' });
+    }
+  });
+  return lines;
+}
 
 // ---- perks -----------------------------------------------------------------
 // Each NPC gives something back once the relationship is real. Random so a visit
@@ -64,13 +101,14 @@ function applyPerk(npc, s) {
 // ---- actions ---------------------------------------------------------------
 export function visitNpc(id) {
   const npc = getNpc(id);
-  if (!npc) return { text: 'Nobody there.', kind: 'info' };
+  if (!npc) return refuse('Nobody there.');
   const s = npcState(id);
 
-  if (s.lastVisit === state.day) return { text: `You already saw ${npc.name} today.`, kind: 'info' };
-  if (state.energy < VISIT_ENERGY) return { text: 'Too tired to go visiting. Rest first.', kind: 'info' };
+  if (s.lastVisit === state.day) return refuse(`You already saw ${npc.name} today.`);
+  if (state.energy < VISIT_ENERGY) return refuse('Too tired to go visiting. Rest first.');
 
   s.lastVisit = state.day;
+  s.lastContact = state.day;
   state.energy = Math.max(0, state.energy - VISIT_ENERGY);
   state.social = Math.min(100, state.social + 6);
 
@@ -90,14 +128,15 @@ export function visitNpc(id) {
 export function giftNpc(id, giftId) {
   const npc = getNpc(id);
   const gift = getGift(giftId);
-  if (!npc || !gift) return { text: 'Nothing to give.', kind: 'info' };
+  if (!npc || !gift) return refuse('Nothing to give.');
   const s = npcState(id);
 
-  if (s.lastGift === state.day) return { text: `${npc.name} already got a gift today.`, kind: 'info' };
-  if (state.money < gift.cost) return { text: `${gift.label} is KES ${gift.cost}. Not today.`, kind: 'info' };
+  if (s.lastGift === state.day) return refuse(`${npc.name} already got a gift today.`);
+  if (state.money < gift.cost) return refuse(`${gift.label} is KES ${gift.cost}. Not today.`);
 
   state.money -= gift.cost;
   s.lastGift = state.day;
+  s.lastContact = state.day;
 
   const liked = npc.likes.includes(giftId);
   const before = s.rel;

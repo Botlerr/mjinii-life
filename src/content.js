@@ -1,11 +1,43 @@
 // src/content.js — ALL game data. Single source of truth; other modules consume this.
+
+// Actions a player may take per day. Rent cycle is 6 days -> 24 slots per cycle.
+export const DAY_SLOTS = 4;
+// Below this hunger, hard work is refused. Side hustles stay open so a broke,
+// starving player always has a way back (no soft-lock).
+export const WORK_HUNGER_MIN = 10;
+
 export const archetypes = {
-  lapo:    { name: 'Lapo Mtu',      desc: 'Street vendor, single room.', money: 200,     room: 'Single Room (Kibera)', career: 'Street Vendor',         rent: 4500 },
-  omo:     { name: 'Omo Area',      desc: 'Matatu / office, one-bed.',   money: 15000,   room: 'One-Bed Flat',         career: 'Matatu / Office',        rent: 18000 },
-  balogun: { name: 'Balogun Trader',desc: 'Market legend, warehouse.',   money: 120000,  room: 'Warehouse + Flat',     career: 'Market Trader',          rent: 55000 },
-  tech:    { name: 'Tech Sis/Bro',  desc: 'Startup, serviced apt.',      money: 80000,   room: 'Serviced Apt',         career: 'Developer / Freelance',  rent: 85000 },
-  nepo:    { name: 'Nepo Baby',     desc: 'Inherited plaza, zero rent.', money: 2500000, room: 'Family Plaza',         career: 'Executive / Advisor',    rent: 0 }
+  lapo: {
+    name: 'Lapo Mtu', desc: 'Street vendor, single room.',
+    money: 2500, room: 'Single Room (Kibera)', career: 'Street Vendor',
+    rent: 4500, pay: 800
+  },
+  omo: {
+    name: 'Omo Area', desc: 'Matatu / office, one-bed.',
+    money: 15000, room: 'One-Bed Flat', career: 'Matatu / Office',
+    rent: 18000, pay: 2600
+  },
+  balogun: {
+    name: 'Balogun Trader', desc: 'Market legend, warehouse.',
+    money: 120000, room: 'Warehouse + Flat', career: 'Market Trader',
+    rent: 55000, pay: 7800
+  },
+  tech: {
+    name: 'Tech Sis/Bro', desc: 'Startup, serviced apt.',
+    money: 80000, room: 'Serviced Apt', career: 'Developer / Freelance',
+    rent: 85000, pay: 12000
+  },
+  nepo: {
+    name: 'Nepo Baby', desc: 'Inherited plaza, zero rent.',
+    money: 2500000, room: 'Family Plaza', career: 'Executive / Advisor',
+    rent: 0, pay: 5000
+  }
 };
+
+// Where you land if you miss two rents in a row. Losing the flat is a setback,
+// not a game over.
+export const EVICTED_ROOM = 'Single Room (Kibera)';
+export const EVICTED_RENT = 4500;
 
 export const locations = [
   'Kibera Estate', 'Westlands Nightlife', 'CBD Work', 'Eastlands Matatu',
@@ -19,12 +51,12 @@ export const foods = [
 ];
 
 export const actions = [
-  { id: 'work',            label: 'Work (+KES)',      desc: 'Earn money' },
+  { id: 'work',            label: 'Work (+KES)',      desc: 'Earn money. Needs food in you.' },
   { id: 'side_hustle',     label: 'Side Hustle',      desc: 'Small earn, small energy cost' },
   { id: 'eat_ugali',       label: 'Eat Ugali',        desc: 'Restore hunger' },
   { id: 'nyama',           label: 'Nyama Choma',      desc: 'Expensive meal, big fun' },
   { id: 'matatu',          label: 'Matatu',           desc: 'Transport + social' },
-  { id: 'rest',            label: 'Rest',             desc: 'Restore energy' },
+  { id: 'rest',            label: 'Rest',             desc: 'Restore energy. Once per day.' },
   { id: 'shop',            label: 'Computer Village', desc: 'Gamble money' },
   { id: 'call_friend',     label: 'Call Friend',      desc: 'Social +' },
   { id: 'study',           label: 'Study',            desc: 'Energy - long-term growth' },

@@ -1,18 +1,29 @@
-// src/actions.js — all player actions (mutate state, return a log line)
+// src/actions.js — all player actions (mutate state, return a log line or a refusal)
+// Every energy-spending action is gated on having the energy, so nothing can drive
+// the player to a dead stop. Rest is deliberately never gated: it is the way back.
 import { state } from './state.js';
+import { archetypes, WORK_HUNGER_MIN } from './content.js';
 
 const clamp = (v, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
+const refuse = text => ({ text, kind: 'info', refused: true });
+const needEnergy = n => (state.energy < n ? refuse(`Too tired — ${n} energy needed. Rest first.`) : null);
 
 export function doWork() {
-  const earn = state.type === 'nepo' ? 5000 : state.type === 'balogun' ? 3500 : state.type === 'tech' ? 2800 : state.type === 'omo' ? 1200 : 800;
-  state.money += earn;
+  if (state.hunger < WORK_HUNGER_MIN) return refuse('Too hungry to work. Eat something first.');
+  const tired = needEnergy(10);
+  if (tired) return tired;
+  const pay = archetypes[state.type]?.pay ?? 800;
+  state.money += pay;
   state.hunger = clamp(state.hunger - 8);
   state.energy = clamp(state.energy - 10);
   state.hygiene = clamp(state.hygiene - 5);
-  return `Work: earned KES ${earn.toLocaleString()}`;
+  return `Work: earned KES ${pay.toLocaleString()}`;
 }
 
 export function doSideHustle() {
+  // Deliberately open to a broke, hungry player — the way back from the edge.
+  const tired = needEnergy(8);
+  if (tired) return tired;
   const earn = Math.floor(Math.random() * 500) + 200;
   state.money += earn;
   state.energy = clamp(state.energy - 8);
@@ -20,7 +31,7 @@ export function doSideHustle() {
 }
 
 export function doEatUgali() {
-  if (state.money < 120) return 'No money for ugali. Hustle first.';
+  if (state.money < 120) return refuse('No money for ugali. Hustle first.');
   state.money -= 120;
   state.hunger = clamp(state.hunger + 35);
   state.energy = clamp(state.energy + 5);
@@ -28,7 +39,7 @@ export function doEatUgali() {
 }
 
 export function doNyama() {
-  if (state.money < 850) return 'Nyama choma is KES 850 — not today.';
+  if (state.money < 850) return refuse('Nyama choma is KES 850 — not today.');
   state.money -= 850;
   state.fun = clamp(state.fun + 18);
   state.social = clamp(state.social + 15);
@@ -37,7 +48,9 @@ export function doNyama() {
 }
 
 export function doMatatu() {
-  if (state.money < 80) return 'Matatu is KES 80. You are walking today.';
+  if (state.money < 80) return refuse('Matatu is KES 80. You are walking today.');
+  const tired = needEnergy(8);
+  if (tired) return tired;
   state.money -= 80;
   state.social = clamp(state.social + 12);
   state.energy = clamp(state.energy - 8);
@@ -45,6 +58,9 @@ export function doMatatu() {
 }
 
 export function doRest() {
+  // Never gated on energy or money: this is the recovery action.
+  if (state.restedToday) return refuse('You already rested today. One rest a day.');
+  state.restedToday = true;
   state.energy = clamp(state.energy + 25);
   state.fun = clamp(state.fun + 8);
   return 'Rested: energy restored';
@@ -66,13 +82,17 @@ export function doCallFriend() {
 }
 
 export function doStudy() {
+  const tired = needEnergy(10);
+  if (tired) return tired;
   state.energy = clamp(state.energy - 10);
   state.happiness = clamp(state.happiness + 5);
   return 'Studied: energy -10, long-term growth';
 }
 
 export function doVisitWestlands() {
-  if (state.money < 1000) return 'Westlands needs KES 1,000 in your pocket.';
+  if (state.money < 1000) return refuse('Westlands needs KES 1,000 in your pocket.');
+  const tired = needEnergy(5);
+  if (tired) return tired;
   state.money -= 1000;
   state.fun = clamp(state.fun + 15);
   state.social = clamp(state.social + 10);
@@ -81,7 +101,9 @@ export function doVisitWestlands() {
 }
 
 export function doVisitKibera() {
-  if (state.money < 500) return 'KES 500 needed for the trip to Kibera.';
+  if (state.money < 500) return refuse('KES 500 needed for the trip to Kibera.');
+  const tired = needEnergy(5);
+  if (tired) return tired;
   state.money -= 500;
   state.social = clamp(state.social + 15);
   state.energy = clamp(state.energy - 5);
@@ -89,7 +111,9 @@ export function doVisitKibera() {
 }
 
 export function doVisitKisumu() {
-  if (state.money < 1500) return 'Kisumu trip is KES 1,500. Not yet.';
+  if (state.money < 1500) return refuse('Kisumu trip is KES 1,500. Not yet.');
+  const tired = needEnergy(10);
+  if (tired) return tired;
   state.money -= 1500;
   state.fun = clamp(state.fun + 15);
   state.energy = clamp(state.energy - 10);
@@ -97,7 +121,9 @@ export function doVisitKisumu() {
 }
 
 export function doVisitMombasa() {
-  if (state.money < 2000) return 'Mombasa is a KES 2,000 trip. Save up.';
+  if (state.money < 2000) return refuse('Mombasa is a KES 2,000 trip. Save up.');
+  const tired = needEnergy(15);
+  if (tired) return tired;
   state.money -= 2000;
   state.fun = clamp(state.fun + 20);
   state.energy = clamp(state.energy - 15);

@@ -42,16 +42,22 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .stat.teal{color:var(--teal)}
 .stat.fg{color:var(--fg)}
 .stat small{display:block;font-size:.6rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.meters{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin:.5rem 0 1rem}
+.meters{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin:.5rem 0 .7rem}
 .meter{height:24px;background:#1a1a1a;border-radius:99px;overflow:hidden;position:relative}
 .meter-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%;transition:width .25s ease}
 .meter-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;color:#0a0a0a;letter-spacing:.04em}
+.slots{font-size:.75rem;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem;display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.slots b{color:var(--accent)}
+.slots .dots{letter-spacing:.18em;color:var(--accent);font-size:.9rem}
+.slots.spent{border-color:var(--red)}
+.slots.spent b,.slots.spent .dots{color:var(--red)}
 .actions{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
 .btn{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#0a0a0a;border:none;border-radius:10px;padding:.85rem .6rem;min-height:48px;font-family:inherit;font-weight:900;font-size:.8rem;letter-spacing:.02em;cursor:pointer;text-align:center}
 .btn:active{opacity:.85}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn.secondary{background:#1c1c1c;color:var(--fg);border:1px solid #333}
-.btn.small{min-height:40px;padding:.5rem .55rem;font-size:.7rem;border-radius:8px}
+.btn.small{min-height:44px;padding:.5rem .55rem;font-size:.7rem;border-radius:8px}
+.btn.wide{grid-column:1/-1}
 .meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:var(--muted);margin-top:.9rem}
 .meta b{color:var(--fg)}
 .meta b.red{color:var(--red)}
@@ -66,6 +72,7 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .rel-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%;transition:width .25s ease}
 .rel-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:#0a0a0a;letter-spacing:.05em}
 .npc-line{font-size:.76rem;color:#cfcfcf;font-style:italic;margin-bottom:.5rem;line-height:1.35}
+.npc-miss{font-size:.7rem;color:var(--red);font-weight:700;margin-bottom:.45rem}
 .npc-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem}
 .npc-perk{display:block;margin-top:.45rem;font-size:.65rem;color:var(--teal);font-weight:700}
 .log{max-height:170px;overflow-y:auto;background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;font-size:.78rem;color:#ccc;-webkit-overflow-scrolling:touch}
@@ -74,6 +81,7 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .log b{color:var(--accent)}
 .log .ev{color:var(--teal)}
 .log .npc{color:var(--accent)}
+.log .no{color:var(--red)}
 .row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem}
 @media(min-width:600px){
   .grid{grid-template-columns:repeat(2,1fr)}
@@ -85,6 +93,10 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
   .grid{grid-template-columns:repeat(3,1fr)}
   .actions{grid-template-columns:repeat(4,1fr)}
   .npc-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .card{transition:border-color .15s,transform .1s}
+  .meter-fill,.rel-fill{transition:width .25s ease}
 }
 </style>
 </head>
@@ -121,10 +133,12 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
       <div class="meter"><div class="meter-fill" id="mSocial"></div><div class="meter-label">SOCIAL</div></div>
     </div>
 
+    <div class="slots" id="slots"></div>
+
     <div class="actions" id="actions"></div>
 
     <div class="meta">
-      <span>Rent: <b class="red" id="rentDue">Day 6</b></span>
+      <span>Rent: <b class="red" id="rentAmount">KES 0</b> due <b id="rentDue">Day 6</b></span>
       <span>Room: <b id="room">—</b></span>
       <span>Career: <b id="career">—</b></span>
     </div>
@@ -147,11 +161,12 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 </div>
 
 <script type="module">
-import { state, save, load, hasSave, reset, archetypes } from './src/state.js';
+import { state, save, load, hasSave, reset, archetypes, canAct, useSlot } from './src/state.js';
 import { actionMap } from './src/actions.js';
 import { advanceDay, recomputeHappiness } from './src/turn.js';
 import { visitNpc, giftNpc } from './src/npcs.js';
 import { renderStats, renderActions, renderNPCs, renderArchetypes, log } from './src/ui.js';
+import { DAY_SLOTS } from './src/content.js';
 
 const $ = id => document.getElementById(id);
 
@@ -168,6 +183,12 @@ function showGame() {
   } else {
     log(`<b>Karibu.</b> You are a ${state.career}. Rent due Saturday — hustle wisely.`);
   }
+}
+
+function refresh() {
+  renderStats();
+  renderActions();
+  renderNPCs();
 }
 
 function persist(line) {
@@ -189,19 +210,29 @@ function runAction(id) {
 }
 
 window.handleAction = function (id) {
+  if (!canAct()) {
+    log('<b>No actions left today.</b> Advance the day.');
+    return;
+  }
   const res = runAction(id);
   if (res === null || res === undefined) return;
+
   const line = typeof res === 'string' ? res : res.text;
   const kind = typeof res === 'string' ? 'action' : (res.kind || 'action');
+  const refused = typeof res === 'object' && res.refused === true;
+
+  if (!refused) useSlot();          // a refusal must not cost you the day
   recomputeHappiness();
-  const inner = kind === 'npc' ? `<span class="npc">${line}</span>`
+
+  const inner = refused ? `<span class="no">${line}</span>`
+              : kind === 'npc' ? `<span class="npc">${line}</span>`
               : kind === 'event' ? `<span class="ev">${line}</span>`
               : line;
   log(`<b>Day ${state.day}:</b> ${inner}`);
   persist(`Day ${state.day}: ${line}`);
+
   save(state);
-  renderStats();
-  renderNPCs();
+  refresh();
   checkGameOver();
 };
 
@@ -213,15 +244,13 @@ window.nextDay = function () {
     persist(`Day ${state.day}: ${l.text}`);
   }
   save(state);
-  renderStats();
-  renderNPCs();
+  refresh();
   checkGameOver();
 };
 
 function checkGameOver() {
   if (state.energy <= 0) {
     log('<b>GAME OVER:</b> Exhausted. Reset or pick a new path.');
-    document.querySelectorAll('#actions .btn').forEach(b => b.disabled = true);
   }
 }
 
@@ -231,6 +260,7 @@ window.startGame = function (t) {
   state.money = c.money;
   state.room = c.room;
   state.career = c.career;
+  state.rent = c.rent;
   state.day = 1;
   state.energy = 60;
   state.hunger = 60;
@@ -239,6 +269,9 @@ window.startGame = function (t) {
   state.social = 50;
   state.happiness = 70;
   state.rentDueDay = 6;
+  state.missedRent = 0;
+  state.slots = DAY_SLOTS;
+  state.restedToday = false;
   state.eventLog = [];
   resetNpcs();
   persist(`New game: ${c.name} — ${c.career}`);
@@ -249,7 +282,7 @@ window.startGame = function (t) {
 
 function resetNpcs() {
   Object.keys(state.npcs || {}).forEach(k => {
-    state.npcs[k] = { rel: 10, lastVisit: 0, lastGift: 0 };
+    state.npcs[k] = { rel: 10, lastVisit: 0, lastGift: 0, lastContact: 0 };
   });
 }
 
@@ -257,8 +290,7 @@ $('resetBtn').onclick = () => {
   if (!confirm('Reset this run? Your save will be cleared.')) return;
   reset();
   save(state);
-  renderStats();
-  renderNPCs();
+  refresh();
   log('<b>Reset.</b> Fresh start on the same path.');
 };
 $('newBtn').onclick = () => {
