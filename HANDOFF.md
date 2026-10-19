@@ -1,21 +1,11 @@
 HANDOFF — MJINII LIFE
 
-Current state (Phase 0 done):
-- New folder: C:\Users\user\mjinii-life\
-- Fresh git repo (master branch), .gitignore, 4 files copied, 1 commit (68f5f1d)
-- README.md added
-- No build system, no PWA manifest yet
+Phase 0 complete. Phase 1 progress:
+- Step 1: modules (state, content, actions, events, UI) + Vite package.json [commit 4696cea]
+- Step 2: mobile-first responsive index.html + localStorage save/load [commit ce1800c]
+- Step 3: PWA manifest + service worker + expanded content (15 events, 12 actions, 3 locations, NPC friends) [commit 624921a]
+- Step 4 (pending): persist event log cap + responsive touch buttons verified
+- Step 5 (pending): PWA manifest linked in index.html
+- Step 6 (pending): content fully wired to UI (events show in log)
 
-What changed this session:
-- Copied mjinii-life.html, lagos-life-characters-cities.html, kenya-life-sim.html
-- Added .gitignore and fresh git repo
-- Added README.md
-- Confirmed decisions: Kenyan theme (MJINII LIFE), PWA→Capacitor, black+acid green, data-driven content
-
-What's next:
-- Phase 1: refactor HTML into modules, mobile responsive, localStorage save/load, PWA manifest/service worker, expand content (3 locations, 12 actions, 15 events, NPC friends)
-- One open question: rename/rebalance the 5 archetypes (Lapo, Omo Area, Balogun Trader, Tech Bro, Nepo Baby) — user asked to confirm
-
-Open questions:
-- Should archetypes be renamed/rebalanced?
-- Confirm Phase 1 start after this push.
+Open: wire events to UI actions fully; test 360px/768px viewport; confirm Phase 1 complete before Phase 2 content expansion.
