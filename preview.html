@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MJINII LIFE — art preview</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600;900&display=swap');
+:root{--bg:#0a0a0a;--fg:#f2f2f2;--accent:#ccff00;--teal:#0d9488;--card:#141414;--line:#222;--muted:#9a9a9a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Inter",system-ui,sans-serif;background:var(--bg);color:var(--fg);padding:1rem 1.25rem 3rem;line-height:1.4}
+h1{color:var(--accent);font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem}
+p.sub{color:var(--muted);font-size:.8rem;margin-bottom:1.5rem}
+h2{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--teal);margin:1.6rem 0 .6rem;border-bottom:1px solid var(--line);padding-bottom:.3rem}
+.row{display:flex;flex-wrap:wrap;gap:.6rem}
+.cell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.5rem;width:132px;text-align:center}
+.cell svg{display:block;width:100%;height:auto}
+.cap{font-size:.62rem;color:var(--muted);margin-top:.35rem;letter-spacing:.04em;text-transform:uppercase}
+.cap b{color:var(--accent);display:block;font-size:.68rem}
+@media(min-width:600px){.cell{width:150px}}
+</style>
+</head>
+<body>
+<h1>Art preview — avatar</h1>
+<p class="sub">Every combination the avatar builder can produce. No game state, no save — just the drawing. Open at 360px and 768px to check scaling.</p>
+<div id="out"></div>
+<script type="module">
+import { buildAvatarSvg, defaultAvatarFor, DEFAULT_AVATAR, MOODS, ARCHETYPE_LOOK } from './src/svg/avatar.js';
+import { skin, outfit, hairColor, hairStyles, fits, accessories } from './src/svg/palette.js';
+
+const out = document.getElementById('out');
+const section = (title, cells) => {
+  const h = document.createElement('h2');
+  h.textContent = title;
+  out.appendChild(h);
+  const row = document.createElement('div');
+  row.className = 'row';
+  cells.forEach(([label, svg]) => {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.innerHTML = svg + `<div class="cap"><b>${label}</b></div>`;
+    row.appendChild(c);
+  });
+  out.appendChild(row);
+};
+
+section('Archetype defaults', Object.keys(ARCHETYPE_LOOK).map(k => [k, buildAvatarSvg(defaultAvatarFor(k), 'neutral')]));
+section('Moods (state-driven)', Object.keys(MOODS).map(m => [m, buildAvatarSvg(DEFAULT_AVATAR, m)]));
+section('Skin tones', Object.keys(skin).map(s => [s, buildAvatarSvg({ ...DEFAULT_AVATAR, skin: s }, 'neutral')]));
+section('Hair styles', hairStyles.map(h => [h.label, buildAvatarSvg({ ...DEFAULT_AVATAR, hair: h.id }, 'neutral')]));
+section('Hair colours', Object.keys(hairColor).map(c => [c, buildAvatarSvg({ ...DEFAULT_AVATAR, hairColor: c }, 'neutral')]));
+section('Outfits', Object.keys(outfit).map(o => [o, buildAvatarSvg({ ...DEFAULT_AVATAR, outfit: o }, 'neutral')]));
+section('Fits', fits.map(f => [f.label, buildAvatarSvg({ ...DEFAULT_AVATAR, fit: f.id }, 'neutral')]));
+section('Accessories', accessories.map(a => [a.label, buildAvatarSvg({ ...DEFAULT_AVATAR, accessory: a.id }, 'neutral')]));
+section('Sneakers', [
+  ['without', buildAvatarSvg({ ...DEFAULT_AVATAR, sneakers: false }, 'neutral')],
+  ['bought', buildAvatarSvg({ ...DEFAULT_AVATAR, sneakers: true }, 'neutral')]
+]);
+</script>
+</body>
+</html>
