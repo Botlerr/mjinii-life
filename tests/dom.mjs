@@ -9,7 +9,8 @@ class El {
     this._html = '';
     this.className = '';
     this.style = {};
-    this.attrs = {};
+    this.disabled = false;
+    this.title = '';
     this.onclick = null;
   }
   set textContent(v) { this._text = String(v); }
@@ -38,6 +39,9 @@ globalThis.document = {
   querySelectorAll: () => []
 };
 globalThis.window = globalThis;
+// stub the router the UI calls; the test asserts what each button sends it
+const calls = [];
+globalThis.window.handleAction = id => calls.push(id);
 
 const store = new Map();
 globalThis.localStorage = {
@@ -46,16 +50,19 @@ globalThis.localStorage = {
   removeItem: k => store.delete(k)
 };
 
-const { state } = await import('../src/state.js');
+const { state, defaultNpcState } = await import('../src/state.js');
 const ui = await import('../src/ui.js');
-const { archetypes, actions, npcs } = await import('../src/content.js');
+const { archetypes, actions, npcs, gifts } = await import('../src/content.js');
 const { advanceDay } = await import('../src/turn.js');
+const { visitNpc } = await import('../src/npcs.js');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
   if (cond) { pass++; console.log(`  PASS  ${name}`); }
   else { fail++; console.log(`  FAIL  ${name} ${extra}`); }
 };
+
+const find = (el, cls) => el.children.find(c => (c.className || '').includes(cls));
 
 console.log('\n[UI] renderArchetypes');
 ui.renderArchetypes();
@@ -68,10 +75,44 @@ ok(`13 actions + Next Day = 14 buttons (got ${ids.actions.children.length})`, id
 ok('Next Day is last', ids.actions.children[ids.actions.children.length - 1].textContent === 'Next Day');
 ok('every button has a handler', ids.actions.children.every(b => typeof b.onclick === 'function'));
 
-console.log('\n[UI] renderNPCs');
+console.log('\n[UI] renderNPCs — interactive cards');
+state.npcs = defaultNpcState();
+state.day = 1;
 ui.renderNPCs();
 ok(`one card per NPC (${npcs.length})`, ids.npcs.children.length === npcs.length);
-ok('NPC names rendered', ids.npcs.children.every((c, i) => c.innerHTML.includes(npcs[i].name)));
+const card0 = ids.npcs.children[0];
+ok('card shows the NPC name', find(card0, 'npc-head').innerHTML.includes(npcs[0].name));
+ok('card shows relation + location', find(card0, 'npc-head').innerHTML.includes(npcs[0].relation) && find(card0, 'npc-head').innerHTML.includes(npcs[0].location));
+ok('card has a relationship meter', !!find(card0, 'rel'));
+ok('meter is labelled with tier and score', find(card0, 'rel').innerHTML.includes('Stranger') && find(card0, 'rel').innerHTML.includes('10/100'));
+ok('card shows the tier voice line', find(card0, 'npc-line').textContent === npcs[0].lines.cold);
+ok('card states the perk', find(card0, 'npc-perk').textContent === npcs[0].perk);
+const actions0 = find(card0, 'npc-actions');
+ok(`visit button + ${gifts.length} gift buttons`, actions0.children.length === gifts.length + 1, `${actions0.children.length}`);
+actions0.children[0].onclick();
+ok('visit button routes to visit_<id>', calls.at(-1) === `visit_${npcs[0].id}`, calls.at(-1));
+actions0.children.slice(1).forEach((b, i) => {
+  b.onclick();
+  ok(`gift button ${i} routes to gift_<id>_<giftId>`, calls.at(-1) === `gift_${npcs[0].id}_${gifts[i].id}`, calls.at(-1));
+});
+
+console.log('\n[UI] NPC buttons reflect daily limits');
+state.npcs = defaultNpcState();
+state.day = 5; state.energy = 80;
+visitNpc('shiro');
+ui.renderNPCs();
+const shiroCard = ids.npcs.children[0];
+ok('visit button disabled after visiting', find(shiroCard, 'npc-actions').children[0].disabled === true);
+ok('visit button relabelled', find(shiroCard, 'npc-actions').children[0].textContent === 'Visited today');
+ok('other NPCs still visitable', find(ids.npcs.children[1], 'npc-actions').children[0].disabled === false);
+ok('relationship meter moved to 20/100', find(shiroCard, 'rel').innerHTML.includes('20/100'));
+
+state.npcs.shiro.lastGift = 5;
+ui.renderNPCs();
+const giftBtns = find(ids.npcs.children[0], 'npc-actions').children.slice(1);
+ok('gift buttons disabled after gifting', giftBtns.every(b => b.disabled === true));
+ok('liked gifts are flagged in the tooltip', giftBtns.some(b => b.title.includes('loves this one')));
+ok('unliked gifts flagged as indifferent', giftBtns.some(b => b.title.includes('indifferent')));
 
 console.log('\n[UI] renderStats + meters');
 state.money = 12345; state.energy = 42; state.happiness = 66; state.day = 7; state.rentDueDay = 1;
@@ -84,7 +125,6 @@ ok('day shown', ids.dayDisplay.textContent === 'Day 7');
 ok('rent due flag at day 1', ids.rentDue.textContent === 'TOMORROW (SAT)', ids.rentDue.textContent);
 ok('hunger meter width', ids.mHunger.style.width === '33%', ids.mHunger.style.width);
 ok('social meter width', ids.mSocial.style.width === '22%', ids.mSocial.style.width);
-// zeroed meters must still render a visible sliver
 state.hunger = 0; ui.renderMeters();
 ok('zero meter still visible (5% floor)', ids.mHunger.style.width === '5%', ids.mHunger.style.width);
 
