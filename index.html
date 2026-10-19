@@ -2,96 +2,250 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0a">
+<meta name="description" content="MJINII LIFE — a Kenyan urban life simulation. Work, eat, hustle, survive.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>MJINII LIFE</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600;900&family=Playfair+Display:ital,wght@1,700&display=swap');
-:root{--bg:#0a0a0a;--fg:#f2f2f2;--accent:#ccff00;--teal:#0d9488;--card:#141414;--muted:#aaa;--red:#e63946;}
-*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;}
-body{font-family:"Inter",system-ui,sans-serif;background:var(--bg);color:var(--fg);padding:1rem;min-height:100vh;}
-header{text-align:center;margin-bottom:1.5rem}
-header h1{font-family:"Playfair Display",serif;font-size:clamp(2rem,10vw,4.5rem);letter-spacing:-0.03em;color:var(--accent);line-height:1}
-.screen{max-width:1000px;margin:0 auto;display:none}
+:root{
+  --bg:#0a0a0a; --fg:#f2f2f2; --accent:#ccff00; --teal:#0d9488;
+  --card:#141414; --line:#222; --muted:#9a9a9a; --red:#e63946;
+  --pad:1rem;
+}
+*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:"Inter",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);padding:var(--pad);min-height:100vh;line-height:1.4}
+header{text-align:center;margin-bottom:1.25rem}
+header h1{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:700;font-size:clamp(2.2rem,11vw,4.5rem);letter-spacing:-0.03em;color:var(--accent);line-height:1}
+header p{color:var(--muted);font-size:clamp(.75rem,3vw,.95rem);margin-top:.35rem}
+.wrap{max-width:1000px;margin:0 auto}
+.screen{display:none}
 .screen.active{display:block}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
-.card{background:var(--card);border:1px solid #222;border-radius:16px;padding:1.2rem;cursor:pointer}
-.card h3{font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-size:.9rem;margin-bottom:.4rem}
-.meters{display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap}
-.meter{flex:1;height:22px;background:#1a1a1a;border-radius:99px;overflow:hidden;position:relative;min-width:70px}
-.meter-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%}
-.meter-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:.6rem;font-weight:700;color:#0a0a0a}
-.btn{display:inline-block;background:var(--accent);color:#0a0a0a;border:none;border-radius:8px;padding:.8rem 1rem;font-weight:900;font-size:.9rem;cursor:pointer;margin:.2rem .15rem;min-width:120px;text-align:center;text-decoration:none;}
-.btn.secondary{background:#222;color:var(--fg);border:1px solid #333}
-@media(min-width:768px){.btn{min-width:140px}}
-.log{max-height:140px;overflow-y:auto;background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:.6rem;font-size:.8rem;color:#ccc;margin-top:.8rem;line-height:1.35}
+h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.8rem;text-align:center}
+.grid{display:grid;grid-template-columns:1fr;gap:.7rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1rem 1.1rem;cursor:pointer;transition:border-color .15s,transform .1s}
+.card:active{transform:scale(.99)}
+.card:hover,.card:focus-visible{border-color:var(--accent);outline:none}
+.card h3{font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-size:.85rem;margin-bottom:.3rem}
+.card p{font-size:.85rem;color:var(--muted)}
+.card small{display:block;margin-top:.4rem;font-size:.7rem;color:var(--teal);font-weight:700}
+.topbar{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap;margin-bottom:.7rem}
+.topbar h2{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-spacing:.07em}
+.topbar .day{color:var(--muted);font-size:.8rem}
+.stats{display:flex;gap:.9rem;flex-wrap:wrap;align-items:baseline;margin-bottom:.5rem}
+.stat{font-weight:900;font-size:1.15rem;color:var(--accent)}
+.stat.teal{color:var(--teal)}
+.stat.fg{color:var(--fg)}
+.stat small{display:block;font-size:.6rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.meters{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin:.5rem 0 1rem}
+.meter{height:24px;background:#1a1a1a;border-radius:99px;overflow:hidden;position:relative}
+.meter-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%;transition:width .25s ease}
+.meter-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;color:#0a0a0a;letter-spacing:.04em}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#0a0a0a;border:none;border-radius:10px;padding:.85rem .6rem;min-height:48px;font-family:inherit;font-weight:900;font-size:.8rem;letter-spacing:.02em;cursor:pointer;text-align:center}
+.btn:active{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.secondary{background:#1c1c1c;color:var(--fg);border:1px solid #333}
+.btn.wide{grid-column:1/-1}
+.meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:var(--muted);margin-top:.9rem}
+.meta b{color:var(--fg)}
+.meta b.red{color:var(--red)}
+.panel{margin-top:1rem}
+.panel h3{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:.4rem}
+.npc-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;font-size:.78rem;margin-bottom:.35rem}
+.npc-card b{color:var(--accent)}
+.log{max-height:170px;overflow-y:auto;background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;font-size:.78rem;color:#ccc;-webkit-overflow-scrolling:touch}
+.log div{padding:.22rem 0;border-bottom:1px solid #171717;line-height:1.35}
+.log div:first-child{color:var(--fg)}
 .log b{color:var(--accent)}
+.log .ev{color:var(--teal)}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem}
+@media(min-width:600px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .actions{grid-template-columns:repeat(3,1fr)}
+}
+@media(min-width:768px){
+  :root{--pad:2rem}
+  .grid{grid-template-columns:repeat(3,1fr)}
+  .actions{grid-template-columns:repeat(4,1fr)}
+}
 </style>
 </head>
 <body>
-<header><h1>MJINII LIFE</h1><p>Kenyan urban sim — work, eat, hustle, survive. Rent hits Saturday.</p></header>
-<section id="select" class="screen active">
-  <h2 style="text-align:center;color:var(--accent);margin-bottom:1rem">Choose Your Path</h2>
-  <div class="grid">
-    <article class="card" onclick="startGame('lapo')"><h3>Lapo Mtu</h3><p>Street vendor, single room.</p></article>
-    <article class="card" onclick="startGame('omo')"><h3>Omo Area</h3><p>Matatu / office, one-bed.</p></article>
-    <article class="card" onclick="startGame('balogun')"><h3>Balogun Trader</h3><p>Market legend, warehouse.</p></article>
-    <article class="card" onclick="startGame('tech')"><h3>Tech Sis/Bro</h3><p>Startup, serviced apt.</p></article>
-    <article class="card" onclick="startGame('nepo')"><h3>Nepo Baby</h3><p>Inherited plaza, zero rent.</p></article>
-  </div>
-</section>
-<section id="game" class="screen">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.8rem">
-    <h2 style="color:var(--accent);font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em" id="playerTitle">Omo Area</h2>
-    <div style="color:var(--muted);font-size:.85rem" id="dayDisplay">Day 1 · Monday</div>
-  </div>
-  <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">
-    <div style="flex:2"><div style="font-size:1.2rem;font-weight:900;color:var(--accent)" id="money">KES 15,000</div><small>Money</small></div>
-    <div><div style="font-size:1.1rem;font-weight:900;color:var(--teal)" id="energy">60%</div><small>Energy</small></div>
-    <div><div style="font-size:1.1rem;font-weight:900" id="happiness">70%</div><small>Happy</small></div>
-  </div>
-  <div style="margin:.4rem 0;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase">Needs</div>
-  <div class="meters">
-    <div class="meter"><div class="meter-fill" id="mHunger" style="width:60%"></div><div class="meter-label">HUNGER</div></div>
-    <div class="meter"><div class="meter-fill" id="mEnergy" style="width:60%"></div><div class="meter-label">ENERGY</div></div>
-    <div class="meter"><div class="meter-fill" id="mFun" style="width:50%"></div><div class="meter-label">FUN</div></div>
-    <div class="meter"><div class="meter-fill" id="mHygiene" style="width:60%"></div><div class="meter-label">HYG</div></div>
-    <div class="meter"><div class="meter-fill" id="mSocial" style="width:50%"></div><div class="meter-label">SOCIAL</div></div>
-  </div>
-  <div style="margin-top:.8rem;display:flex;gap:.3rem;flex-wrap:wrap">
-    <button class="btn" onclick="action('work')">Work (+KES)</button>
-    <button class="btn" onclick="action('eat_ugali')">Eat Ugali</button>
-    <button class="btn" onclick="action('nyama')">Nyama Choma</button>
-    <button class="btn" onclick="action('matatu')">Matatu</button>
-    <button class="btn" onclick="action('rest')">Rest</button>
-    <button class="btn" onclick="action('shop')">Computer Village</button>
-    <button class="btn secondary" onclick="action('next_day')">Next Day</button>
-  </div>
-  <div style="margin-top:.8rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:var(--muted)">
-    <span>Rent: <b id="rentDue" style="color:var(--red)">Day 6</b></span>
-    <span>Room: <b id="room">One-Bed Flat</b></span>
-    <span>Career: <b id="career">Matatu / Office</b></span>
-  </div>
-  <div class="log" id="log"><b>Karibu.</b> Work, eat, hustle. Rent hits Saturday.</div>
-</section>
+<header>
+  <h1>MJINII LIFE</h1>
+  <p>Kenyan urban sim — work, eat, hustle, survive. Rent hits Saturday.</p>
+</header>
+
+<div class="wrap">
+  <section id="select" class="screen active">
+    <h2 class="section">Choose Your Path</h2>
+    <div class="grid" id="archetypeGrid"></div>
+    <div class="row" id="continueRow" style="justify-content:center"></div>
+  </section>
+
+  <section id="game" class="screen">
+    <div class="topbar">
+      <h2 id="playerTitle">—</h2>
+      <div class="day" id="dayDisplay">Day 1</div>
+    </div>
+
+    <div class="stats">
+      <div><span class="stat" id="money">KES 0</span><small>Money</small></div>
+      <div><span class="stat teal" id="energy">60%</span><small>Energy</small></div>
+      <div><span class="stat fg" id="happiness">70%</span><small>Happy</small></div>
+    </div>
+
+    <div class="meters">
+      <div class="meter"><div class="meter-fill" id="mHunger"></div><div class="meter-label">HUNGER</div></div>
+      <div class="meter"><div class="meter-fill" id="mEnergy"></div><div class="meter-label">ENERGY</div></div>
+      <div class="meter"><div class="meter-fill" id="mFun"></div><div class="meter-label">FUN</div></div>
+      <div class="meter"><div class="meter-fill" id="mHygiene"></div><div class="meter-label">HYG</div></div>
+      <div class="meter"><div class="meter-fill" id="mSocial"></div><div class="meter-label">SOCIAL</div></div>
+    </div>
+
+    <div class="actions" id="actions"></div>
+
+    <div class="meta">
+      <span>Rent: <b class="red" id="rentDue">Day 6</b></span>
+      <span>Room: <b id="room">—</b></span>
+      <span>Career: <b id="career">—</b></span>
+    </div>
+
+    <div class="panel">
+      <h3>Your Circle</h3>
+      <div id="npcs"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Event Log</h3>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="row">
+      <button class="btn secondary" id="resetBtn">Reset Game</button>
+      <button class="btn secondary" id="newBtn">New Game</button>
+    </div>
+  </section>
+</div>
+
 <script type="module">
-import {state, cfg, save, load, reset} from './src/state.js';
-import {work, eat, nyama, rest} from './src/actions.js';
-window.startGame = function(t){
-  const c=cfg[t]; state.type=t; state.money=c.money; state.room=c.room; state.career=c.career; state.hunger=60; state.energy=60; state.fun=50; state.hygiene=60; state.social=50; state.eventLog=[]; state.day=1; state.happiness=70; state.rentDueDay=6; document.getElementById('select').classList.remove('active'); document.getElementById('game').classList.add('active'); document.getElementById('playerTitle').textContent=t.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()); document.getElementById('room').textContent=c.room; document.getElementById('career').textContent=c.career; document.getElementById('money').textContent='KES '+state.money.toLocaleString('en-KE'); document.getElementById('energy').textContent=state.energy+'%'; document.getElementById('happiness').textContent=state.happiness+'%'; document.getElementById('dayDisplay').textContent='Day '+state.day+' · Monday'; document.getElementById('log').innerHTML='<b>Karibu!</b> You are '+c.career+'. Rent due Saturday. Hustle wisely.'; renderMeters();
+import { state, save, load, hasSave, reset, archetypes } from './src/state.js';
+import { actionMap } from './src/actions.js';
+import { advanceDay, recomputeHappiness } from './src/turn.js';
+import { renderStats, renderActions, renderNPCs, renderArchetypes, log } from './src/ui.js';
+
+const $ = id => document.getElementById(id);
+
+function showGame() {
+  $('select').classList.remove('active');
+  $('game').classList.add('active');
+  $('playerTitle').textContent = (archetypes[state.type]?.name || state.type).toUpperCase();
+  renderStats();
+  renderActions();
+  renderNPCs();
+  $('log').innerHTML = '';
+  if (state.eventLog.length) {
+    state.eventLog.slice(-20).forEach(entry => log(entry));
+  } else {
+    log(`<b>Karibu.</b> You are a ${state.career}. Rent due Saturday — hustle wisely.`);
+  }
+}
+
+function persist(line) {
+  if (!line) return;
+  state.eventLog.push(line);
+  if (state.eventLog.length > 50) state.eventLog = state.eventLog.slice(-50);
+}
+
+window.handleAction = function (id) {
+  const fn = actionMap[id];
+  if (!fn) return;
+  const line = fn();
+  recomputeHappiness();
+  log(`<b>Day ${state.day}:</b> ${line}`);
+  persist(`Day ${state.day}: ${line}`);
+  save(state);
+  renderStats();
+  checkGameOver();
 };
-window.action = function(a){
-  if(a==='work'){let earn=state.type==='nepo'?5000:state.type==='balogun'?3500:state.type==='tech'?2800:state.type==='omo'?1200:800; state.money+=earn; state.hunger=Math.max(0,state.hunger-8); state.energy=Math.max(0,state.energy-10); state.hygiene=Math.max(0,state.hygiene-5); document.getElementById('log').innerHTML='<b>Work:</b> Earned '+earn.toLocaleString('en-KE')+'.';}
-  if(a==='eat_ugali'){state.money-=120; state.hunger=Math.min(100,state.hunger+35); state.energy=Math.min(100,state.energy+5); document.getElementById('log').innerHTML='<b>Ate Ugali + Sukuma Wiki:</b> Hunger restored.';}
-  if(a==='nyama'){state.money-=850; state.fun=Math.min(100,state.fun+18); state.social=Math.min(100,state.social+15); state.hunger=Math.min(100,state.hunger+10); document.getElementById('log').innerHTML='<b>Nyama Choma:</b> Grilled goat. Fun & social up.';}
-  if(a==='matatu'){state.money-=80; state.social=Math.min(100,state.social+12); state.energy=Math.max(0,state.energy-8); document.getElementById('log').innerHTML='<b>Matatu:</b> Chatted with strangers. Energy -8.';}
-  if(a==='rest'){state.energy=Math.min(100,state.energy+25); state.fun=Math.min(100,state.fun+8); document.getElementById('log').innerHTML='<b>Rest:</b> Energy restored.';}
-  if(a==='shop'){let bonus=Math.random()>0.65?3000:-500; state.money+=bonus; document.getElementById('log').innerHTML=bonus>0?'<b>Computer Village:</b> Sold gadget! +'+bonus.toLocaleString():'<b>Computer Village:</b> Bad deal. -'+Math.abs(bonus).toLocaleString();}
-  if(a==='next_day'){state.day++; state.hunger=Math.max(0,state.hunger-15); state.energy=Math.max(0,state.energy-10); state.fun=Math.max(0,state.fun-5); state.social=Math.max(0,state.social-4); state.hygiene=Math.max(0,state.hygiene-6); document.getElementById('log').innerHTML='<b>Day '+state.day+'</b> — new hustle.'; if(state.rentDueDay<=1){let rent=cfg[state.type].rent; if(state.money>=rent){state.money-=rent; document.getElementById('log').innerHTML='<b>RENT PAID:</b> '+rent.toLocaleString()+' (Saturday met).';}else{document.getElementById('log').innerHTML='<b>EVICTION RISK!</b> Rent '+rent.toLocaleString()+' not covered.';} state.rentDueDay=6;}else{state.rentDueDay--;} document.getElementById('rentDue').textContent=state.rentDueDay<=1?'TOMORROW (SAT)':('Day '+state.rentDueDay);}
-  state.happiness=Math.round((state.energy*0.3+state.social*0.25+state.fun*0.25+state.hygiene*0.2)); document.getElementById('happiness').textContent=state.happiness+'%'; document.getElementById('energy').textContent=state.energy+'%'; document.getElementById('money').textContent='KES '+state.money.toLocaleString('en-KE'); document.getElementById('mHunger').style.width=Math.max(5,state.hunger)+'%'; document.getElementById('mEnergy').style.width=Math.max(5,state.energy)+'%'; document.getElementById('mFun').style.width=Math.max(5,state.fun)+'%'; document.getElementById('mHygiene').style.width=Math.max(5,state.hygiene)+'%'; document.getElementById('mSocial').style.width=Math.max(5,state.social)+'%'; save(state); if(state.energy<=0){document.getElementById('log').innerHTML='<b>GAME OVER:</b> Exhausted. Try a new path.'; document.querySelectorAll('.btn:not(.secondary)').forEach(b=>b.disabled=true);}
+
+window.nextDay = function () {
+  const lines = advanceDay(state);
+  for (const l of lines) {
+    const inner = l.kind === 'event' ? `<span class="ev">${l.text}</span>` : l.text;
+    log(`<b>Day ${state.day}:</b> ${inner}`);
+    persist(`Day ${state.day}: ${l.text}`);
+  }
+  save(state);
+  renderStats();
+  checkGameOver();
 };
-function renderMeters(){document.getElementById('mHunger').style.width=Math.max(5,state.hunger)+'%';document.getElementById('mEnergy').style.width=Math.max(5,state.energy)+'%';document.getElementById('mFun').style.width=Math.max(5,state.fun)+'%';document.getElementById('mHygiene').style.width=Math.max(5,state.hygiene)+'%';document.getElementById('mSocial').style.width=Math.max(5,state.social)+'%';}
-if(load())document.getElementById('log').innerHTML='<b>Continue saved game.</b>';
+
+function checkGameOver() {
+  if (state.energy <= 0) {
+    log('<b>GAME OVER:</b> Exhausted. Reset or pick a new path.');
+    document.querySelectorAll('#actions .btn').forEach(b => b.disabled = true);
+  }
+}
+
+window.startGame = function (t) {
+  const c = archetypes[t];
+  state.type = t;
+  state.money = c.money;
+  state.room = c.room;
+  state.career = c.career;
+  state.day = 1;
+  state.energy = 60;
+  state.hunger = 60;
+  state.fun = 50;
+  state.hygiene = 60;
+  state.social = 50;
+  state.happiness = 70;
+  state.rentDueDay = 6;
+  state.eventLog = [];
+  persist(`New game: ${c.name} — ${c.career}`);
+  save(state);
+  showGame();
+  log(`<b>Karibu!</b> You are a ${c.career}. Rent due Saturday. Hustle wisely.`);
+};
+
+$('resetBtn').onclick = () => {
+  if (!confirm('Reset this run? Your save will be cleared.')) return;
+  reset();
+  save(state);
+  renderStats();
+  log('<b>Reset.</b> Fresh start on the same path.');
+};
+$('newBtn').onclick = () => {
+  if (!confirm('Start a new game? Current progress is cleared.')) return;
+  reset();
+  save(state);
+  $('game').classList.remove('active');
+  $('select').classList.add('active');
+  renderArchetypes();
+};
+
+renderArchetypes();
+renderNPCs();
+
+if (hasSave() && load()) {
+  const row = $('continueRow');
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.textContent = `Continue — Day ${state.day}, KES ${state.money.toLocaleString()}`;
+  b.onclick = () => { showGame(); log('<b>Saved game loaded.</b>'); };
+  row.appendChild(b);
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>
