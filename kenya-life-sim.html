@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenya Life Sim — Nairobi Edition</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600;900&family=Playfair+Display:ital,wght@1,700&display=swap');
+:root{
+  --bg:#0a0a0a; --fg:#f2f2f2; --accent:#ccff00; --teal:#0d9488;
+  --card:#141414; --muted:#888;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+header{text-align:center;margin-bottom:2rem}
+header h1{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,6vw,4rem);letter-spacing:-0.03em;color:var(--accent);line-height:1}
+header p{margin-top:.4rem;color:var(--muted);font-size:1rem}
+.subtitle{font-style:italic;color:var(--teal);font-size:.9rem;margin-top:.2rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.2rem;width:100%;max-width:1100px}
+.card{background:var(--card);border:1px solid #222;border-radius:16px;padding:1.4rem;display:flex;flex-direction:column;gap:.6rem;transition:transform .15s, border-color .15s}
+.card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.card h2{font-size:1rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--teal)}
+.bar{height:14px;background:#1a1a1a;border-radius:99px;overflow:hidden;margin-top:.3rem;position:relative}
+.fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%;transition:width .5s ease}
+.stats{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-top:.4rem}
+.actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
+button{font-family:inherit;background:var(--accent);color:#0a0a0a;border:none;border-radius:8px;padding:.55rem .9rem;font-weight:700;font-size:.82rem;cursor:pointer;transition:opacity .15s,transform .1s}
+button:hover{opacity:.9;transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+button.secondary{background:#222;color:var(--fg);border:1px solid #333}
+.player-2{border-top:3px solid var(--teal);position:relative;overflow:hidden}
+.badge{position:absolute;top:.6rem;right:.6rem;background:var(--teal);color:#fff;font-size:.65rem;padding:.15rem .4rem;border-radius:99px;font-weight:700;text-transform:uppercase}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Nairobi Life Sim</h1>
+  <p>A Kenyan life simulation — single or co-op</p>
+  <div class="subtitle">Two can play: Player 1 (Green) · Player 2 (Teal)</div>
+</header>
+
+<section class="grid" id="game">
+  <article class="card" id="p1">
+    <h2>Player 1 — Green</h2>
+    <div class="stats"><span>Money: KES <b id="m1">0</b></span><span>Health <b id="h1">60</b></span></div>
+    <div class="bar"><div class="fill" id="bar-h1" style="width:60%"></div></div>
+    <div class="stats"><span>Career: <b id="j1">Hustler</b></span><span>Happiness <b id="hp1">70</b></span></div>
+    <div class="bar"><div class="fill" id="bar-hp1" style="width:70%"></div></div>
+    <div class="actions" id="acts1"></div>
+  </article>
+
+  <article class="card player-2" id="p2">
+    <span class="badge">Player 2</span>
+    <h2>Player 2 — Teal</h2>
+    <div class="stats"><span>Money: KES <b id="m2">0</b></span><span>Health <b id="h2">60</b></span></div>
+    <div class="bar"><div class="fill" id="bar-h2" style="width:60%"></div></div>
+    <div class="stats"><span>Career: <b id="j2">Hustler</b></span><span>Happiness <b id="hp2">70</b></span></div>
+    <div class="bar"><div class="fill" id="bar-hp2" style="width:70%"></div></div>
+    <div class="actions" id="acts2"></div>
+  </article>
+</section>
+
+<script>
+const jobs=["Hustler","Matatu Driver","Techie","Chef","Entrepreneur","Artist"];
+function rand(n){return Math.floor(Math.random()*n)+1;}
+function btn(parent,txt,on){const b=document.createElement('button');b.textContent=txt;b.onclick=on;parent.appendChild(b);}
+function render(p){
+  const data={1:{m:400,h:60,job:0,happy:70},2:{m:400,h:60,job:0,happy:70}};
+  [1,2].forEach(i=>{
+    document.getElementById('m'+i).textContent=data[i].m;
+    document.getElementById('h'+i).textContent=data[i].h;
+    document.getElementById('j'+i).textContent=jobs[data[i].job];
+    document.getElementById('hp'+i).textContent=data[i].happy;
+    document.getElementById('bar-h'+i).style.width=data[i].h+'%';
+    document.getElementById('bar-hp'+i).style.width=data[i].happy+'%';
+  });
+}
+[1,2].forEach(i=>{
+  const a=document.getElementById('acts'+i);
+  btn(a,"Work (+KES)",()=>{let d={1:{},2:{}}; d[i].m=320; update(i,d);});
+  btn(a,"Rest (+Health)",()=>{let d={1:{},2:{}}; d[i].h=15; update(i,d);});
+  btn(a,"Learn (+Career)",()=>{let d={1:{},2:{}}; d[i].job=1; update(i,d);});
+  btn(a,"Social (+Happy)",()=>{let d={1:{},2:{}}; d[i].happy=15; update(i,d);});
+});
+function update(p,d){
+  // Simple co-op: if both play same round, bonus
+  // (stub — expand as needed)
+  render(p);
+}
+render();
+</script>
+</body>
+</html>

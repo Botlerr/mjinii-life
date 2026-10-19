@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lagos Life — Characters & Cities</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600;900&family=Playfair+Display:ital,wght@1,700&display=swap');
+:root{--bg:#0a0a0a;--fg:#f2f2f2;--accent:#ccff00;--teal:#0d9488;--card:#141414;--muted:#888;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--fg);padding:2rem 1rem}
+h1{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,6vw,3.8rem);color:var(--accent);letter-spacing:-0.03em;line-height:1.05;text-align:center;margin-bottom:.2rem}
+.subtitle{text-align:center;color:var(--teal);margin-bottom:2rem;font-style:italic}
+.container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem}
+.card{background:var(--card);border:1px solid #222;border-radius:16px;padding:1.4rem;transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.card h2{font-size:1.1rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+.card h3{font-size:.85rem;color:var(--teal);font-weight:600;margin-bottom:.8rem}
+.tag{display:inline-block;background:#1a1a1a;border:1px solid #333;border-radius:99px;padding:.15rem .5rem;font-size:.75rem;color:var(--fg);margin:.15rem .1rem}
+ul{list-style:none;margin-top:.6rem}
+li{padding:.35rem 0;border-bottom:1px solid #1a1a1a;font-size:.9rem;color:#ddd}
+li b{color:var(--accent)}
+.badge{background:var(--teal);color:#fff;font-size:.7rem;padding:.15rem .45rem;border-radius:99px;font-weight:700;text-transform:uppercase;margin-left:.4rem}
+</style>
+</head>
+<body>
+<h1>Lagos Life <span style="font-size:1rem;color:var(--teal);font-family:Inter;font-style:normal">— Character Archetypes & Cities</span></h1>
+<p class="subtitle">Nigerian urban sim · Free-to-play browser · No download</p>
+
+<div class="container">
+
+<article class="card">
+  <h2>Character Archetypes <span class="badge">5 Types</span></h2>
+  <h3>Start from Lapo baby to Nepo baby</h3>
+  <ul>
+    <li><b>Lapo baby</b> — Hustler from the trenches. Low rent, street food, zero savings. Job: street vendor.</li>
+    <li><b>Omo Area</b> — Middle-class kid with small room. Steady job, basic appliances. Job: office clerk.</li>
+    <li><b>Tech Bro / Sis</b> — Startup scene, laptop, solar inverter, eats out. Job: developer / freelancer.</li>
+    <li><b>Balogun Trader</b> — Market legend, high cash flow, bulk goods. Job: import/export.</li>
+    <li><b>Nepo baby</b> — Privileged start. Inherited plaza, drivers, no rent stress. Job: executive.</li>
+  </ul>
+</article>
+
+<article class="card">
+  <h2>Cities & Districts <span class="badge">6 Hubs</span></h2>
+  <h3>Real Nigerian urban spots</h3>
+  <ul>
+    <li><b>Lagos Island</b> — Commercial center, markets, traffic.</li>
+    <li><b>Ikeja</b> — Airport zone, middle-class housing.</li>
+    <li><b>Abuja (Wuse)</b> — Capital vibe, government jobs.</li>
+    <li><b>Port Harcourt</b> — Oil money, nightlife, river trade.</li>
+    <li><b>Ibadan</b> — University town, student hustle.</li>
+    <li><b>Enugu</b> — Coal-city heritage, calm pace.</li>
+  </ul>
+</article>
+
+<article class="card">
+  <h2>Iconic Locations <span class="badge">Social</span></h2>
+  <h3>Party, hustle, trade, pray</h3>
+  <ul>
+    <li><b>Quilox</b> — Nightclub, fun + social boost, entry fee.</li>
+    <li><b>Balogun</b> — Market hub, trade, bulk discounts, hustle.</li>
+    <li><b>Computer Village</b> — Tech repair, gadget trade.</li>
+    <li><b>Oshodi</b> — Transport hub, matatu station.</li>
+    <li><b>Surulere</b> — Rent due Saturdays — traditional deadline.</li>
+    <li><b>Eko Atlantic</b> — Luxury upgrade path.</li>
+  </ul>
+</article>
+
+<article class="card">
+  <h2>Household Items <span class="badge">Buy / Upgrade</span></h2>
+  <h3>From small room to plaza</h3>
+  <ul>
+    <li><b>Chair (Plastic)</b> — Basic seating. Cost: ₦500.</li>
+    <li><b>Solar Inverter</b> — Power stability. Cost: ₦35,000.</li>
+    <li><b>Gas Cooker</b> — Cook faster, hygiene up. Cost: ₦22,000.</li>
+    <li><b>Generator (Tiger)</b> — Backup power. Cost: ₦80,000.</li>
+    <li><b>Air Conditioner</b> — Comfort / fun. Cost: ₦150,000.</li>
+    <li><b>Plaza (Upgrade)</b> — From 1-room to 3-bed. Cost: ₦2.5M.</li>
+  </ul>
+</article>
+
+<article class="card">
+  <h2>Core Mechanics <span class="badge">Sims-style</span></h2>
+  <h3>Meters, rent, trade</h3>
+  <ul>
+    <li><b>Needs</b> — Hunger, Energy, Fun, Hygiene, Social.</li>
+    <li><b>Rent</b> — Due Saturdays (traditional cycle).</li>
+    <li><b>Currency</b> — Virtual Naira (₦).</li>
+    <li><b>Trade</b> — Real-player marketplace.</li>
+    <li><b>Party</b> — Quilox events boost social.</li>
+    <li><b>Upgrade path</b> — Room → Flat → Plaza.</li>
+  </ul>
+</article>
+
+<article class="card">
+  <h2>Platform Details <span class="badge">Free</span></h2>
+  <h3>Browser-first, no download</h3>
+  <ul>
+    <li><b>Access</b> — Direct link play (like Lagos Life App).</li>
+    <li><b>No install</b> — Runs in mobile/desktop browser.</li>
+    <li><b>Multiplayer</b> — Real-time trade with other players.</li>
+    <li><b>Theme</b> — Black + acid green (#ccff00) editorial.</li>
+  </ul>
+</article>
+
+</div>
+
+<script>
+console.log("Characters loaded:", ["Lapo baby","Omo Area","Tech Bro","Balogun Trader","Nepo baby"]);
+console.log("Cities:", ["Lagos Island","Ikeja","Abuja","Port Harcourt","Ibadan","Enugu"]);
+</script>
+</body>
+</html>
