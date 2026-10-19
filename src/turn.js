@@ -3,6 +3,7 @@
 import { state } from './state.js';
 import { archetypes } from './content.js';
 import { triggerRandomEvent } from './events.js';
+import { maybeNpcEvent } from './npcs.js';
 
 export function recomputeHappiness(s = state) {
   s.happiness = Math.round(s.energy * 0.3 + s.social * 0.25 + s.fun * 0.25 + s.hygiene * 0.2);
@@ -38,6 +39,10 @@ export function advanceDay(s = state) {
   // random event
   const ev = triggerRandomEvent();
   lines.push({ text: `EVENT: ${ev.text}`, kind: 'event' });
+
+  // relationship-gated NPC event
+  const npcEv = maybeNpcEvent();
+  if (npcEv) lines.push(npcEv);
 
   recomputeHappiness(s);
   return lines;

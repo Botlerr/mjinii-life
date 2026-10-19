@@ -49,30 +49,42 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .actions{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
 .btn{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#0a0a0a;border:none;border-radius:10px;padding:.85rem .6rem;min-height:48px;font-family:inherit;font-weight:900;font-size:.8rem;letter-spacing:.02em;cursor:pointer;text-align:center}
 .btn:active{opacity:.85}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:disabled{opacity:.35;cursor:not-allowed}
 .btn.secondary{background:#1c1c1c;color:var(--fg);border:1px solid #333}
-.btn.wide{grid-column:1/-1}
+.btn.small{min-height:40px;padding:.5rem .55rem;font-size:.7rem;border-radius:8px}
 .meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:var(--muted);margin-top:.9rem}
 .meta b{color:var(--fg)}
 .meta b.red{color:var(--red)}
 .panel{margin-top:1rem}
 .panel h3{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:.4rem}
-.npc-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;font-size:.78rem;margin-bottom:.35rem}
-.npc-card b{color:var(--accent)}
+.npc-grid{display:grid;grid-template-columns:1fr;gap:.6rem}
+.npc-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem}
+.npc-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap;margin-bottom:.4rem}
+.npc-head b{color:var(--accent);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em}
+.npc-meta{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.rel{height:22px;background:#1a1a1a;border-radius:99px;overflow:hidden;position:relative;margin-bottom:.45rem}
+.rel-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%;transition:width .25s ease}
+.rel-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:#0a0a0a;letter-spacing:.05em}
+.npc-line{font-size:.76rem;color:#cfcfcf;font-style:italic;margin-bottom:.5rem;line-height:1.35}
+.npc-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem}
+.npc-perk{display:block;margin-top:.45rem;font-size:.65rem;color:var(--teal);font-weight:700}
 .log{max-height:170px;overflow-y:auto;background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:.6rem .7rem;font-size:.78rem;color:#ccc;-webkit-overflow-scrolling:touch}
 .log div{padding:.22rem 0;border-bottom:1px solid #171717;line-height:1.35}
 .log div:first-child{color:var(--fg)}
 .log b{color:var(--accent)}
 .log .ev{color:var(--teal)}
+.log .npc{color:var(--accent)}
 .row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem}
 @media(min-width:600px){
   .grid{grid-template-columns:repeat(2,1fr)}
   .actions{grid-template-columns:repeat(3,1fr)}
+  .npc-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(min-width:768px){
   :root{--pad:2rem}
   .grid{grid-template-columns:repeat(3,1fr)}
   .actions{grid-template-columns:repeat(4,1fr)}
+  .npc-grid{grid-template-columns:repeat(3,1fr)}
 }
 </style>
 </head>
@@ -118,8 +130,8 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
     </div>
 
     <div class="panel">
-      <h3>Your Circle</h3>
-      <div id="npcs"></div>
+      <h3>Your Circle — visit, gift, build the relationship</h3>
+      <div class="npc-grid" id="npcs"></div>
     </div>
 
     <div class="panel">
@@ -138,6 +150,7 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 import { state, save, load, hasSave, reset, archetypes } from './src/state.js';
 import { actionMap } from './src/actions.js';
 import { advanceDay, recomputeHappiness } from './src/turn.js';
+import { visitNpc, giftNpc } from './src/npcs.js';
 import { renderStats, renderActions, renderNPCs, renderArchetypes, log } from './src/ui.js';
 
 const $ = id => document.getElementById(id);
@@ -163,15 +176,32 @@ function persist(line) {
   if (state.eventLog.length > 50) state.eventLog = state.eventLog.slice(-50);
 }
 
-window.handleAction = function (id) {
+// Routes plain actions (actionMap) and NPC actions (visit_<id>, gift_<id>_<giftId>).
+function runAction(id) {
+  if (id.startsWith('visit_')) return visitNpc(id.slice('visit_'.length));
+  if (id.startsWith('gift_')) {
+    const rest = id.slice('gift_'.length);
+    const cut = rest.lastIndexOf('_');
+    return giftNpc(rest.slice(0, cut), rest.slice(cut + 1));
+  }
   const fn = actionMap[id];
-  if (!fn) return;
-  const line = fn();
+  return fn ? fn() : null;
+}
+
+window.handleAction = function (id) {
+  const res = runAction(id);
+  if (res === null || res === undefined) return;
+  const line = typeof res === 'string' ? res : res.text;
+  const kind = typeof res === 'string' ? 'action' : (res.kind || 'action');
   recomputeHappiness();
-  log(`<b>Day ${state.day}:</b> ${line}`);
+  const inner = kind === 'npc' ? `<span class="npc">${line}</span>`
+              : kind === 'event' ? `<span class="ev">${line}</span>`
+              : line;
+  log(`<b>Day ${state.day}:</b> ${inner}`);
   persist(`Day ${state.day}: ${line}`);
   save(state);
   renderStats();
+  renderNPCs();
   checkGameOver();
 };
 
@@ -184,6 +214,7 @@ window.nextDay = function () {
   }
   save(state);
   renderStats();
+  renderNPCs();
   checkGameOver();
 };
 
@@ -209,17 +240,25 @@ window.startGame = function (t) {
   state.happiness = 70;
   state.rentDueDay = 6;
   state.eventLog = [];
+  resetNpcs();
   persist(`New game: ${c.name} — ${c.career}`);
   save(state);
   showGame();
   log(`<b>Karibu!</b> You are a ${c.career}. Rent due Saturday. Hustle wisely.`);
 };
 
+function resetNpcs() {
+  Object.keys(state.npcs || {}).forEach(k => {
+    state.npcs[k] = { rel: 10, lastVisit: 0, lastGift: 0 };
+  });
+}
+
 $('resetBtn').onclick = () => {
   if (!confirm('Reset this run? Your save will be cleared.')) return;
   reset();
   save(state);
   renderStats();
+  renderNPCs();
   log('<b>Reset.</b> Fresh start on the same path.');
 };
 $('newBtn').onclick = () => {

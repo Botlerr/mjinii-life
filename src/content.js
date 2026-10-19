@@ -1,4 +1,4 @@
-// src/content.js — all game data (data-driven, not hardcoded in UI)
+// src/content.js — ALL game data. Single source of truth; other modules consume this.
 export const archetypes = {
   lapo:    { name: 'Lapo Mtu',      desc: 'Street vendor, single room.', money: 200,     room: 'Single Room (Kibera)', career: 'Street Vendor',         rent: 4500 },
   omo:     { name: 'Omo Area',      desc: 'Matatu / office, one-bed.',   money: 15000,   room: 'One-Bed Flat',         career: 'Matatu / Office',        rent: 18000 },
@@ -34,6 +34,14 @@ export const actions = [
   { id: 'visit_mombasa',   label: 'Visit Mombasa',    desc: 'Travel + fun (long trip)' }
 ];
 
+// Gifts you can give. Relationship gain is doubled when it matches an NPC's likes.
+export const gifts = [
+  { id: 'chapati',  label: 'Chapati',   cost: 50 },
+  { id: 'airtime',  label: 'Airtime',   cost: 100 },
+  { id: 'book',     label: 'Book',      cost: 800 },
+  { id: 'sneakers', label: 'Sneakers',  cost: 2500 }
+];
+
 export const events = [
   { id: 'nepa_blackout',   text: 'NEPA blackout — token empty',             effect: { energy: -5 } },
   { id: 'water_rationing', text: 'Water rationing — no shower today',       effect: { hygiene: -10 } },
@@ -49,11 +57,54 @@ export const events = [
   { id: 'power_restored',  text: 'Power restored — token refill bonus',     effect: { energy: 5 } },
   { id: 'rain_stops',      text: 'Rain stops — fresh air, fun +10',         effect: { fun: 10 } },
   { id: 'mpesa_fee',       text: 'M-Pesa fee waived — save KES 50',         effect: { money: 50 } },
-  { id: 'friend_invite',   text: 'Friend invites you out — social +15',     effect: { social: 15 } }
+  { id: 'friend_invite',   text: 'Friend invites you out — social +15',     effect: { social: 15 } },
+  { id: 'group_chat',      text: 'Group chat goes off all day — fun +5',    effect: { fun: 5 } },
+  { id: 'family_call',     text: 'Uncle J calls about a family thing',      effect: { social: 5 } },
+  { id: 'job_listing',     text: 'Nairobi Doc forwards a job listing',      effect: { happiness: 5 } }
 ];
 
+// NPCs — interactive. `likes` doubles gift gain, `perk` fires on visits at tier.
 export const npcs = [
-  { name: 'Shiro',       relation: 'Friend', mood: 'happy',   gift: 'Chapati' },
-  { name: 'Uncle J',     relation: 'Family', mood: 'neutral', gift: 'Advice' },
-  { name: 'Nairobi Doc', relation: 'Work',   mood: 'busy',    gift: 'Referral' }
+  {
+    id: 'shiro',
+    name: 'Shiro',
+    relation: 'Friend',
+    location: 'Kibera Estate',
+    likes: ['chapati', 'airtime'],
+    lines: {
+      cold:    'Shiro nods but keeps walking. Not today.',
+      neutral: 'Shiro: "Sasa? Long time." She stops, half-turned.',
+      warm:    'Shiro: "Wewe! Come, sit. You are eating something."',
+      close:   'Shiro: "You are family. Anything you need, you say."'
+    },
+    perk: 'Feeds you on visits once you are Friends.'
+  },
+  {
+    id: 'unclej',
+    name: 'Uncle J',
+    relation: 'Family',
+    location: 'Eastlands',
+    likes: ['book'],
+    lines: {
+      cold:    'Uncle J looks at you over his glasses. He has heard things.',
+      neutral: 'Uncle J: "You are working? Good. Keep it that way."',
+      warm:    'Uncle J: "Sit. I was just making tea."',
+      close:   'Uncle J: "Whatever it is, we sort it as a family."'
+    },
+    perk: 'At Close, may send money or cover a rent shortfall.'
+  },
+  {
+    id: 'doc',
+    name: 'Nairobi Doc',
+    relation: 'Work',
+    location: 'Westlands',
+    likes: ['airtime', 'sneakers'],
+    lines: {
+      cold:    'Doc checks his phone. "Sorry — back-to-back today."',
+      neutral: 'Doc: "Ah, you. What are you working on?"',
+      warm:    'Doc: "Good timing. Sit, let me tell you something."',
+      close:   'Doc: "I am putting your name forward. Do not embarrass me."'
+    },
+    perk: 'At Friends or above, may refer you for paid gigs.'
+  }
 ];
