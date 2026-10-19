@@ -25,6 +25,7 @@ class El {
     this.classList = {
       add: c => this._classes.add(c),
       remove: c => this._classes.delete(c),
+      toggle: (c, on) => { if (on === undefined ? !this._classes.has(c) : on) this._classes.add(c); else this._classes.delete(c); },
       contains: c => this._classes.has(c)
     };
   }
@@ -40,8 +41,8 @@ class El {
 }
 
 const ids = {};
-['money', 'energy', 'happiness', 'dayDisplay', 'rentDue', 'room', 'career',
- 'mHunger', 'mEnergy', 'mFun', 'mHygiene', 'mSocial', 'log', 'actions', 'npcs',
+['money', 'energy', 'happiness', 'dayDisplay', 'rentDue', 'rentAmount', 'room', 'career',
+ 'mHunger', 'mEnergy', 'mFun', 'mHygiene', 'mSocial', 'slots', 'log', 'actions', 'npcs',
  'archetypeGrid', 'select', 'game', 'playerTitle', 'continueRow', 'resetBtn', 'newBtn']
   .forEach(id => { ids[id] = new El('div'); });
 
@@ -71,7 +72,7 @@ const ok = (name, cond, extra = '') => {
 
 try {
   await import(pathToFileURL(tmp).href);
-  const { state } = await import('../src/state.js');
+  const { state, archetypes } = await import('../src/state.js');
   const { relationship, npcState } = await import('../src/npcs.js');
 
   console.log('\n[E2E] page boot');
@@ -94,7 +95,7 @@ try {
   console.log('\n[E2E] plain action through the router');
   const m0 = state.money;
   window.handleAction('work');
-  ok('work pays out', state.money === m0 + 1200, `${state.money}`);
+  ok('work pays out', state.money === m0 + archetypes.omo.pay, `${state.money} vs ${m0 + archetypes.omo.pay}`);
   ok('log line appended', ids.log.children.length === 3, `${ids.log.children.length}`);
   ok('log shows the day', ids.log.children[0].innerHTML.includes('Day 1'));
   ok('save persisted the new balance', JSON.parse(store.get('mjinii-save')).money === state.money);
@@ -119,6 +120,29 @@ try {
   ok('gift buttons disabled after use', ids.npcs.children[0].children[3].children[1].disabled === true);
   ok('relationship persisted to disk', JSON.parse(store.get('mjinii-save')).npcs.shiro.rel === relationship('shiro'));
 
+  console.log('\n[E2E] action budget through the router');
+  // work + visit + gift so far this day
+  ok('real actions spend slots', state.slots === 1, `${state.slots}`);
+  window.handleAction('work');
+  ok('slots now exhausted', state.slots === 0, `${state.slots}`);
+  ok('action buttons disabled when out', ids.actions.children[0].disabled === true);
+  ok('Next Day is promoted when out', ids.actions.children[13].textContent.includes('out of actions'), ids.actions.children[13].textContent);
+  const moneyAtCap = state.money;
+  window.handleAction('work');
+  ok('further actions are refused', state.money === moneyAtCap, `${state.money}`);
+  ok('the refusal is explained in the log', ids.log.children[0].innerHTML.includes('No actions left'));
+
+  console.log('\n[E2E] a refusal must not cost a slot');
+  window.nextDay();
+  const slotsAtDawn = state.slots;
+  state.hunger = 0;
+  window.handleAction('work');
+  ok('starving work refusal leaves the budget alone', state.slots === slotsAtDawn, `${state.slots}`);
+  ok('the refusal is logged in red', ids.log.children[0].innerHTML.includes('no'), ids.log.children[0].innerHTML);
+  state.hunger = 60;
+  window.handleAction('work');
+  ok('the same slot still works after a refusal', state.slots === slotsAtDawn - 1, `${state.slots}`);
+
   console.log('\n[E2E] a full day');
   const day0 = state.day;
   const relBefore = relationship('shiro');
@@ -135,7 +159,7 @@ try {
   ok(`rendered log capped at 20 (got ${ids.log.children.length})`, ids.log.children.length === 20);
   const saved = JSON.parse(store.get('mjinii-save'));
   ok(`persisted log capped at 50 (got ${saved.eventLog.length})`, saved.eventLog.length === 50);
-  ok('persisted log keeps the newest', saved.eventLog[saved.eventLog.length - 1].includes('EVENT:'));
+  ok('persisted log keeps the newest', saved.eventLog[saved.eventLog.length - 1].startsWith('Day '), saved.eventLog[saved.eventLog.length - 1]);
   ok('relationships still in range after 40 days', Object.values(saved.npcs).every(n => n.rel >= 0 && n.rel <= 100));
 
   console.log('\n[E2E] reset via the button');

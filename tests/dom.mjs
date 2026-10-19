@@ -12,6 +12,13 @@ class El {
     this.disabled = false;
     this.title = '';
     this.onclick = null;
+    this._classes = new Set();
+    this.classList = {
+      add: c => this._classes.add(c),
+      remove: c => this._classes.delete(c),
+      toggle: (c, on) => { if (on === undefined ? !this._classes.has(c) : on) this._classes.add(c); else this._classes.delete(c); },
+      contains: c => this._classes.has(c)
+    };
   }
   set textContent(v) { this._text = String(v); }
   get textContent() { return this._text; }
@@ -29,8 +36,8 @@ class El {
 }
 
 const ids = {};
-const ID_LIST = ['money', 'energy', 'happiness', 'dayDisplay', 'rentDue', 'room', 'career',
-  'mHunger', 'mEnergy', 'mFun', 'mHygiene', 'mSocial', 'log', 'actions', 'npcs', 'archetypeGrid'];
+const ID_LIST = ['money', 'energy', 'happiness', 'dayDisplay', 'rentDue', 'rentAmount', 'room', 'career',
+  'mHunger', 'mEnergy', 'mFun', 'mHygiene', 'mSocial', 'slots', 'log', 'actions', 'npcs', 'archetypeGrid'];
 ID_LIST.forEach(id => { ids[id] = new El('div'); });
 
 globalThis.document = {
