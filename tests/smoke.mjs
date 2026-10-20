@@ -71,10 +71,11 @@ for (let i = 0; i < 400; i++) {
   }
 }
 ok('all meters within 0..100 over 400 turns', outOfRange.length === 0, outOfRange.slice(0, 3).join(','));
-ok(`day advanced to 401 (got ${state.day})`, state.day === 401);
-ok('money still finite', Number.isFinite(state.money), `money=${state.money}`);
+// A 400-day lapo run that never pays rent should eventually hit the fail state.
+ok('a run that ignores rent ends in eviction', state.gameOver === 'evicted', `gameOver=${state.gameOver}`);
 
 console.log('\n[6] Rent cycle');
+reset();
 state.type = 'omo'; state.rent = archetypes.omo.rent; state.rentDueDay = 1; state.money = 100000; state.day = 10;
 let lines = advanceDay(state);
 // Assert on the log line, not the balance: a random event can also move money that turn.
@@ -85,13 +86,14 @@ ok('rent log line present', lines.some(l => l.text.includes('RENT PAID')));
 ok('rentDueDay reset to 6', state.rentDueDay === 6, `got ${state.rentDueDay}`);
 state.rentDueDay = 1; state.money = 100; // cannot pay
 lines = advanceDay(state);
-ok('eviction risk flagged when broke', lines.some(l => l.text.includes('EVICTION RISK')));
+ok('eviction risk flagged when broke', lines.some(l => l.text.includes('EVICTION WARNING')), JSON.stringify(lines.map(l => l.text)));
 state.rentDueDay = 4;
 advanceDay(state);
 ok('rentDueDay counts down (4 -> 3)', state.rentDueDay === 3, `got ${state.rentDueDay}`);
 ok('rentLabel formats', rentLabel({ rentDueDay: 1 }) === 'TOMORROW (SAT)' && rentLabel({ rentDueDay: 5 }) === 'Day 5');
 
 console.log('\n[7] Random events fire and apply effects');
+reset();
 const seen = new Set();
 for (let i = 0; i < 300; i++) {
   state.money = 100000; state.energy = 50; state.hunger = 50; state.fun = 50; state.hygiene = 50; state.social = 50;
@@ -102,6 +104,7 @@ for (let i = 0; i < 300; i++) {
 ok(`event variety over 300 days (got ${seen.size} distinct)`, seen.size >= 10, [...seen].join(' | '));
 
 console.log('\n[8] Event log cap');
+reset();
 state.eventLog = [];
 for (let i = 0; i < 80; i++) state.eventLog.push(`line ${i}`);
 if (state.eventLog.length > MAX_LOG) state.eventLog = state.eventLog.slice(-MAX_LOG);

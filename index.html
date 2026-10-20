@@ -33,7 +33,7 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .card:hover,.card:focus-visible{border-color:var(--accent);outline:none}
 .card h3{font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-size:.85rem;margin-bottom:.3rem}
 .card p{font-size:.85rem;color:var(--muted)}
-.card small{display:block;margin-top:.4rem;font-size:.7rem;color:var(--teal);font-weight:700}
+.card small{display:block;margin-top:.4rem;font-size:.7rem;color:var(--teal);font-weight:700;line-height:1.5}
 .topbar{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap;margin-bottom:.7rem}
 .topbar h2{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-spacing:.07em}
 .topbar .day{color:var(--muted);font-size:.8rem}
@@ -42,9 +42,13 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .stat.teal{color:var(--teal)}
 .stat.fg{color:var(--fg)}
 .stat small{display:block;font-size:.6rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.rep-wrap{margin-bottom:.6rem}
+.rep-wrap .meter{height:16px}
+.rep-wrap .rel-label{color:#0a0a0a}
 .meters{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin:.5rem 0 .7rem}
 .meter{height:24px;background:#1a1a1a;border-radius:99px;overflow:hidden;position:relative}
 .meter-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--accent));width:0%;transition:width .25s ease}
+.meter-fill.low{background:linear-gradient(90deg,#7a1f2b,var(--red))}
 .meter-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;color:#0a0a0a;letter-spacing:.04em}
 .slots{font-size:.75rem;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;margin-bottom:.7rem;display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
 .slots b{color:var(--accent)}
@@ -83,6 +87,16 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
 .log .npc{color:var(--accent)}
 .log .no{color:var(--red)}
 .row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem}
+/* game over / start again */
+#gameover{text-align:center;padding:1.5rem 1rem}
+#overTitle{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:clamp(1.8rem,8vw,3rem);color:var(--red);line-height:1.05;margin-bottom:.6rem}
+#overBody{color:var(--muted);font-size:.85rem;max-width:34ch;margin:0 auto .5rem}
+#overLine{font-size:.78rem;color:var(--teal);font-weight:700;margin-bottom:1.2rem}
+#overArchetype{display:inline-block;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;margin-bottom:1.2rem}
+#overStats{list-style:none;text-align:left;max-width:360px;margin:0 auto 1.4rem;display:grid;gap:.35rem}
+#overStats li{display:flex;justify-content:space-between;gap:1rem;font-size:.8rem;border-bottom:1px solid #171717;padding:.35rem 0}
+#overStats span{color:var(--muted)}
+#overStats b{color:var(--accent)}
 @media(min-width:600px){
   .grid{grid-template-columns:repeat(2,1fr)}
   .actions{grid-template-columns:repeat(3,1fr)}
@@ -123,6 +137,11 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
       <div><span class="stat" id="money">KES 0</span><small>Money</small></div>
       <div><span class="stat teal" id="energy">60%</span><small>Energy</small></div>
       <div><span class="stat fg" id="happiness">70%</span><small>Happy</small></div>
+      <div><span class="stat" id="hungerNum">60%</span><small>Hunger</small></div>
+    </div>
+
+    <div class="rep-wrap">
+      <div class="meter"><div class="meter-fill" id="mRep" style="width:50%"></div><div class="meter-label">REPUTATION <span id="rep">50</span></div></div>
     </div>
 
     <div class="meters">
@@ -158,20 +177,33 @@ h2.section{color:var(--accent);font-size:1rem;text-transform:uppercase;letter-sp
       <button class="btn secondary" id="newBtn">New Game</button>
     </div>
   </section>
+
+  <section id="gameover" class="screen">
+    <h2 id="overTitle">Run over</h2>
+    <p id="overBody"></p>
+    <p id="overLine"></p>
+    <div id="overArchetype"></div>
+    <ul id="overStats"></ul>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="againBtn">Start Again</button>
+    </div>
+  </section>
 </div>
 
 <script type="module">
 import { state, save, load, hasSave, reset, archetypes, canAct, useSlot } from './src/state.js';
 import { actionMap } from './src/actions.js';
+import { actionRep, DAY_SLOTS } from './src/content.js';
 import { advanceDay, recomputeHappiness } from './src/turn.js';
 import { visitNpc, giftNpc } from './src/npcs.js';
-import { renderStats, renderActions, renderNPCs, renderArchetypes, log } from './src/ui.js';
-import { DAY_SLOTS } from './src/content.js';
+import { bumpReputation, record, isGameOver } from './src/run.js';
+import { renderStats, renderActions, renderNPCs, renderArchetypes, renderGameOver, log } from './src/ui.js';
 
 const $ = id => document.getElementById(id);
 
 function showGame() {
   $('select').classList.remove('active');
+  $('gameover').classList.remove('active');
   $('game').classList.add('active');
   $('playerTitle').textContent = (archetypes[state.type]?.name || state.type).toUpperCase();
   renderStats();
@@ -209,6 +241,11 @@ function runAction(id) {
   return fn ? fn() : null;
 }
 
+// The run can only end on eviction or a ruined name — never instantly.
+function checkFail() {
+  if (isGameOver(state)) renderGameOver();
+}
+
 window.handleAction = function (id) {
   if (!canAct()) {
     log('<b>No actions left today.</b> Advance the day.');
@@ -221,7 +258,13 @@ window.handleAction = function (id) {
   const kind = typeof res === 'string' ? 'action' : (res.kind || 'action');
   const refused = typeof res === 'object' && res.refused === true;
 
-  if (!refused) useSlot();          // a refusal must not cost you the day
+  if (!refused) {
+    useSlot();
+    record(state, 'actionsTaken');
+    if (id === 'work') record(state, 'daysWorked');
+    if (id.startsWith('gift_')) record(state, 'giftsGiven');
+    bumpReputation(actionRep[id] || 0);
+  }
   recomputeHappiness();
 
   const inner = refused ? `<span class="no">${line}</span>`
@@ -233,10 +276,11 @@ window.handleAction = function (id) {
 
   save(state);
   refresh();
-  checkGameOver();
+  checkFail();
 };
 
 window.nextDay = function () {
+  if (isGameOver(state)) { renderGameOver(); return; }
   const lines = advanceDay(state);
   for (const l of lines) {
     const inner = l.kind === 'event' ? `<span class="ev">${l.text}</span>` : l.text;
@@ -245,14 +289,8 @@ window.nextDay = function () {
   }
   save(state);
   refresh();
-  checkGameOver();
+  checkFail();
 };
-
-function checkGameOver() {
-  if (state.energy <= 0) {
-    log('<b>GAME OVER:</b> Exhausted. Reset or pick a new path.');
-  }
-}
 
 window.startGame = function (t) {
   const c = archetypes[t];
@@ -268,12 +306,15 @@ window.startGame = function (t) {
   state.hygiene = 60;
   state.social = 50;
   state.happiness = 70;
+  state.reputation = 50;
   state.rentDueDay = 6;
   state.missedRent = 0;
-  state.slots = DAY_SLOTS;
+  state.slots = 4;
   state.restedToday = false;
   state.eventLog = [];
+  state.gameOver = null;
   resetNpcs();
+  resetRun();
   persist(`New game: ${c.name} — ${c.career}`);
   save(state);
   showGame();
@@ -284,6 +325,10 @@ function resetNpcs() {
   Object.keys(state.npcs || {}).forEach(k => {
     state.npcs[k] = { rel: 10, lastVisit: 0, lastGift: 0, lastContact: 0 };
   });
+}
+
+function resetRun() {
+  state.run = { rentPaid: 0, rentMissed: 0, evictions: 0, daysWorked: 0, actionsTaken: 0, giftsGiven: 0, earned: 0 };
 }
 
 $('resetBtn').onclick = () => {
@@ -298,6 +343,13 @@ $('newBtn').onclick = () => {
   reset();
   save(state);
   $('game').classList.remove('active');
+  $('select').classList.add('active');
+  renderArchetypes();
+};
+$('againBtn').onclick = () => {
+  reset();
+  save(state);
+  $('gameover').classList.remove('active');
   $('select').classList.add('active');
   renderArchetypes();
 };

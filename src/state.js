@@ -1,5 +1,6 @@
 // src/state.js — game state, save/load, reset, migration
-import { archetypes, npcs, DAY_SLOTS, EVICTED_ROOM, EVICTED_RENT } from './content.js';
+import { archetypes, npcs, DAY_SLOTS, REP_START } from './content.js';
+import { defaultRunStats } from './run.js';
 
 export { archetypes };
 
@@ -22,15 +23,18 @@ export let state = {
   fun: 50,
   hygiene: 60,
   social: 50,
+  reputation: REP_START,
   room: 'One-Bed Flat',
   career: 'Matatu / Office',
-  rent: 18000,          // authoritative current rent (drops if evicted)
+  rent: 18000,          // authoritative current rent
   rentDueDay: 6,
-  missedRent: 0,        // consecutive missed rents; 2 -> evicted
+  missedRent: 0,        // 1 = warned, 2 = evicted
   slots: DAY_SLOTS,     // actions left today
   restedToday: false,
   eventLog: [],
-  npcs: defaultNpcState()
+  npcs: defaultNpcState(),
+  run: defaultRunStats(),
+  gameOver: null        // null | 'evicted' | 'reputation'
 };
 
 // Fills in any NPC (or field) missing from an older save.
@@ -48,22 +52,25 @@ export function ensureNpcState(s = state) {
   return s.npcs;
 }
 
-// Pre-budget saves have no rent/slots fields; derive them from the archetype.
+// Pre-budget / pre-reputation saves are missing these fields; derive or default them.
 export function ensureEconomyState(s = state) {
   const a = archetypes[s.type] || archetypes.omo;
   if (typeof s.rent !== 'number') s.rent = a.rent;
   if (typeof s.missedRent !== 'number') s.missedRent = 0;
   if (typeof s.slots !== 'number' || s.slots > DAY_SLOTS) s.slots = DAY_SLOTS;
   if (typeof s.restedToday !== 'boolean') s.restedToday = false;
+  if (typeof s.reputation !== 'number') s.reputation = REP_START;
+  if (s.reputation < 0 || s.reputation > 100) s.reputation = REP_START;
+  if (!s.run || typeof s.run !== 'object') s.run = defaultRunStats();
   if (!s.room) s.room = a.room;
   if (!s.career) s.career = a.career;
+  if (!Array.isArray(s.eventLog)) s.eventLog = [];
   return s;
 }
 
 export function ensureAll(s = state) {
   ensureNpcState(s);
   ensureEconomyState(s);
-  if (!Array.isArray(s.eventLog)) s.eventLog = [];
   return s;
 }
 
@@ -71,12 +78,14 @@ export function save(s) {
   localStorage.setItem('mjinii-save', JSON.stringify({
     type: s.type, day: s.day, money: s.money, energy: s.energy,
     happiness: s.happiness, hunger: s.hunger, fun: s.fun,
-    hygiene: s.hygiene, social: s.social,
+    hygiene: s.hygiene, social: s.social, reputation: s.reputation,
     room: s.room, career: s.career,
     rent: s.rent, rentDueDay: s.rentDueDay, missedRent: s.missedRent,
     slots: s.slots, restedToday: s.restedToday,
     eventLog: s.eventLog.slice(-MAX_LOG),
-    npcs: s.npcs
+    npcs: s.npcs,
+    run: s.run,
+    gameOver: s.gameOver
   }));
 }
 
@@ -89,7 +98,6 @@ export function load() {
       const hadNpcs = d.npcs && typeof d.npcs === 'object';
       Object.assign(state, d);
       if (!hadNpcs) state.npcs = defaultNpcState();
-      if (!Array.isArray(state.eventLog)) state.eventLog = [];
       ensureAll(state);
       return true;
     }
@@ -119,31 +127,25 @@ export function reset() {
   state.hygiene = 60;
   state.social = 50;
   state.happiness = 70;
+  state.reputation = REP_START;
   state.eventLog = [];
   state.rentDueDay = 6;
   state.missedRent = 0;
   state.slots = DAY_SLOTS;
   state.restedToday = false;
   state.npcs = defaultNpcState();
+  state.run = defaultRunStats();
+  state.gameOver = null;
 }
 
 // ---- action budget ---------------------------------------------------------
 // Deliberately NOT gated on energy: at 0 energy the player must still be able to
 // reach Rest, otherwise the game dead-ends. Energy limits live on the actions.
 export function canAct(s = state) {
-  return s.slots > 0;
+  return s.slots > 0 && !s.gameOver;
 }
 
 export function useSlot(s = state) {
   if (s.slots > 0) s.slots--;
   return s.slots;
-}
-
-// ---- eviction --------------------------------------------------------------
-export function evict(s = state) {
-  s.room = EVICTED_ROOM;
-  s.rent = EVICTED_RENT;
-  s.missedRent = 0;
-  s.happiness = Math.max(0, s.happiness - 25);
-  return s;
 }

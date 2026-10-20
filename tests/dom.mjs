@@ -37,7 +37,8 @@ class El {
 
 const ids = {};
 const ID_LIST = ['money', 'energy', 'happiness', 'dayDisplay', 'rentDue', 'rentAmount', 'room', 'career',
-  'mHunger', 'mEnergy', 'mFun', 'mHygiene', 'mSocial', 'slots', 'log', 'actions', 'npcs', 'archetypeGrid'];
+  'mHunger', 'mEnergy', 'mFun', 'mHygiene', 'mSocial', 'hungerNum', 'rep', 'mRep', 'slots', 'log', 'actions', 'npcs', 'archetypeGrid',
+  'gameover', 'overTitle', 'overBody', 'overLine', 'overArchetype', 'overStats', 'againBtn'];
 ID_LIST.forEach(id => { ids[id] = new El('div'); });
 
 globalThis.document = {

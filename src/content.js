@@ -5,39 +5,51 @@ export const DAY_SLOTS = 4;
 // Below this hunger, hard work is refused. Side hustles stay open so a broke,
 // starving player always has a way back (no soft-lock).
 export const WORK_HUNGER_MIN = 10;
+// Being hungry is not free. Two effects: it drains energy overnight (below), and it
+// is part of the happiness formula, so you cannot stay cheerful on an empty stomach.
+// `max` is inclusive, so a hunger of exactly 0 is starving, not "very hungry".
+export const HUNGER_PENALTY = [
+  { max: 0,  energy: 12, label: 'starving' },
+  { max: 9,  energy: 6,  label: 'very hungry' },
+  { max: 24, energy: 3,  label: 'hungry' }
+];
+// An empty stomach slows you down: hustling on less than 25 hunger pays less.
+export const HUSTLE_HUNGER_MIN = 25;
+export const HUSTLE_HUNGRY_RATE = 0.6;
+
+export const REP_START = 50;
+export const REP_FATAL = 0;   // reputation at or below this ends the run
 
 export const archetypes = {
   lapo: {
     name: 'Lapo Mtu', desc: 'Street vendor, single room.',
     money: 2500, room: 'Single Room (Kibera)', career: 'Street Vendor',
-    rent: 4500, pay: 800
+    rent: 4500, pay: 800, repDrain: 0
   },
   omo: {
     name: 'Omo Area', desc: 'Matatu / office, one-bed.',
     money: 15000, room: 'One-Bed Flat', career: 'Matatu / Office',
-    rent: 18000, pay: 2600
+    rent: 18000, pay: 2600, repDrain: 0
   },
   balogun: {
     name: 'Balogun Trader', desc: 'Market legend, warehouse.',
     money: 120000, room: 'Warehouse + Flat', career: 'Market Trader',
-    rent: 55000, pay: 7800
+    rent: 55000, pay: 7800, repDrain: 0
   },
   tech: {
     name: 'Tech Sis/Bro', desc: 'Startup, serviced apt.',
     money: 80000, room: 'Serviced Apt', career: 'Developer / Freelance',
-    rent: 85000, pay: 12000
+    rent: 85000, pay: 12000, repDrain: 0
   },
   nepo: {
     name: 'Nepo Baby', desc: 'Inherited plaza, zero rent.',
     money: 2500000, room: 'Family Plaza', career: 'Executive / Advisor',
-    rent: 0, pay: 5000
+    rent: 0, pay: 5000,
+    // No rent, so the pressure is the name: talk drains reputation daily, and only
+    // spending on other people holds it up.
+    repDrain: 2
   }
 };
-
-// Where you land if you miss two rents in a row. Losing the flat is a setback,
-// not a game over.
-export const EVICTED_ROOM = 'Single Room (Kibera)';
-export const EVICTED_RENT = 4500;
 
 export const locations = [
   'Kibera Estate', 'Westlands Nightlife', 'CBD Work', 'Eastlands Matatu',
@@ -66,7 +78,22 @@ export const actions = [
   { id: 'visit_mombasa',   label: 'Visit Mombasa',    desc: 'Travel + fun (long trip)' }
 ];
 
-// Gifts you can give. Relationship gain is doubled when it matches an NPC's likes.
+// Reputation deltas. Reputation is at stake for everyone, but only Nepo bleeds it
+// daily — everyone else has to do something catastrophic to reach the floor.
+export const actionRep = {
+  work: 1, side_hustle: 1, eat_ugali: 0, nyama: 2, matatu: 0, rest: -1,
+  shop: 0, call_friend: 1, study: 1,
+  visit_westlands: 1, visit_kibera: 1, visit_kisumu: 1, visit_mombasa: 1
+};
+
+export const eventRep = {
+  nepa_blackout: 0, water_rationing: 0, flooded_road: 0, landlord: 0,
+  harambee: -2, council_raid: -5, fuel_hike: 0, job_interview: 1,
+  viral_video: 5, boda_accident: -1, matatu_strike: 0, power_restored: 0,
+  rain_stops: 0, mpesa_fee: 0, friend_invite: 1, group_chat: 1, family_call: 1,
+  job_listing: 2
+};
+
 export const gifts = [
   { id: 'chapati',  label: 'Chapati',   cost: 50 },
   { id: 'airtime',  label: 'Airtime',   cost: 100 },
@@ -95,7 +122,6 @@ export const events = [
   { id: 'job_listing',     text: 'Nairobi Doc forwards a job listing',      effect: { happiness: 5 } }
 ];
 
-// NPCs — interactive. `likes` doubles gift gain, `perk` fires on visits at tier.
 export const npcs = [
   {
     id: 'shiro',
@@ -140,3 +166,6 @@ export const npcs = [
     perk: 'At Friends or above, may refer you for paid gigs.'
   }
 ];
+
+export const EVICTED_ROOM = 'Single Room (Kibera)';
+export const EVICTED_RENT = 4500;

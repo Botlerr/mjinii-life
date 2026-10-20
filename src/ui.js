@@ -1,12 +1,14 @@
 // src/ui.js — rendering only. No game rules here.
 import { state, canAct } from './state.js';
-import { archetypes, actions, npcs, gifts, DAY_SLOTS } from './content.js';
+import { archetypes, actions, npcs, gifts, DAY_SLOTS, REP_FATAL } from './content.js';
 import { npcState, tierOf, visitedToday, giftedToday, missHint } from './npcs.js';
+import { runSummary } from './run.js';
 
 export function renderStats() {
   document.getElementById('money').textContent = 'KES ' + state.money.toLocaleString('en-KE');
   document.getElementById('energy').textContent = state.energy + '%';
   document.getElementById('happiness').textContent = state.happiness + '%';
+  document.getElementById('hungerNum').textContent = state.hunger + '%';
   document.getElementById('dayDisplay').textContent = 'Day ' + state.day;
   document.getElementById('rentDue').textContent = state.rentDueDay <= 1 ? 'TOMORROW (SAT)' : 'Day ' + state.rentDueDay;
   document.getElementById('room').textContent = state.room;
@@ -14,6 +16,7 @@ export function renderStats() {
   document.getElementById('rentAmount').textContent = 'KES ' + (state.rent ?? 0).toLocaleString('en-KE');
   renderMeters();
   renderSlots();
+  renderReputation();
 }
 
 export function renderSlots() {
@@ -23,6 +26,19 @@ export function renderSlots() {
   el.innerHTML = `<span class="dots">${'●'.repeat(left)}${'○'.repeat(Math.max(0, DAY_SLOTS - left))}</span> ` +
                  `<b>${left}/${DAY_SLOTS}</b> actions left today`;
   el.classList.toggle('spent', left === 0);
+}
+
+export function renderReputation() {
+  const el = document.getElementById('rep');
+  if (!el) return;
+  const rep = state.reputation;
+  el.textContent = rep;
+  el.classList.toggle('low', rep <= 15);
+  const bar = document.getElementById('mRep');
+  if (bar) {
+    bar.style.width = Math.max(5, rep) + '%';
+    bar.classList.toggle('low', rep <= 15);
+  }
 }
 
 export function renderMeters() {
@@ -141,8 +157,45 @@ export function renderArchetypes() {
     const card = document.createElement('article');
     card.className = 'card';
     card.innerHTML = `<h3>${a.name}</h3><p>${a.desc}</p>` +
-                     `<small>KES ${a.money.toLocaleString('en-KE')} · rent KES ${a.rent.toLocaleString('en-KE')} · pay KES ${a.pay.toLocaleString('en-KE')}/day</small>`;
+                     `<small>KES ${a.money.toLocaleString('en-KE')} · rent KES ${a.rent.toLocaleString('en-KE')} · pay KES ${a.pay.toLocaleString('en-KE')}/day` +
+                     (a.repDrain ? `<br><b>rep -${a.repDrain}/day — spend on people or the name goes</b>` : '') +
+                     `</small>`;
     card.onclick = () => window.startGame(key);
     grid.appendChild(card);
   }
+}
+
+// The "start again" screen: what happened, and how the run measured up.
+export function renderGameOver() {
+  const s = runSummary(state);
+  const scr = document.getElementById('gameover');
+  if (!scr) return;
+  document.getElementById('game').classList.remove('active');
+  scr.classList.add('active');
+
+  document.getElementById('overTitle').textContent = s.title;
+  document.getElementById('overBody').textContent = s.body;
+  document.getElementById('overLine').textContent = s.line;
+  document.getElementById('overArchetype').textContent = s.archetype;
+
+  const rows = [
+    ['Days survived', s.day],
+    ['Money left', 'KES ' + s.money.toLocaleString('en-KE')],
+    ['Rent paid', s.rentPaid + ' × KES ' + (state.rent || 0).toLocaleString('en-KE')],
+    ['Rents missed', s.rentMissed],
+    ['Days worked', s.daysWorked],
+    ['Actions taken', s.actionsTaken],
+    ['Gifts given', s.giftsGiven],
+    ['Reputation at the end', s.reputation + ' / 100']
+  ];
+  if (s.bestFriend) {
+    rows.push(['Closest bond', `${s.bestFriend.name} (${s.bestFriend.rel}/100)`]);
+  }
+  const list = document.getElementById('overStats');
+  list.innerHTML = '';
+  rows.forEach(([k, v]) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${k}</span><b>${v}</b>`;
+    list.appendChild(li);
+  });
 }

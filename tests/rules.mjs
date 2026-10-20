@@ -8,12 +8,14 @@ globalThis.localStorage = {
 };
 
 const base = '../src/';
-const { state, reset, canAct, useSlot, defaultNpcState, evict } = await import(base + 'state.js');
+const { state, reset, canAct, useSlot, defaultNpcState } = await import(base + 'state.js');
 const { actionMap } = await import(base + 'actions.js');
-const { advanceDay } = await import(base + 'turn.js');
-const npcMod = await import(base + 'npcs.js');
-const { visitNpc, applyDecay, missHint, daysSinceContact, DECAY_AFTER_DAYS, DECAY_PER_WEEK, MISS_HINT_DAYS } = npcMod;
-const { archetypes, DAY_SLOTS, WORK_HUNGER_MIN, EVICTED_ROOM, EVICTED_RENT } = await import(base + 'content.js');
+const { advanceDay, hungerPenalty, recomputeHappiness } = await import(base + 'turn.js');
+const { setRng } = await import(base + 'rng.js');
+const { rollFor } = await import(base + 'events.js');
+const { visitNpc, applyDecay, missHint, daysSinceContact, DECAY_AFTER_DAYS, DECAY_PER_WEEK, MISS_HINT_DAYS } = await import(base + 'npcs.js');
+const { archetypes, DAY_SLOTS, WORK_HUNGER_MIN, HUNGER_PENALTY, HUSTLE_HUNGER_MIN, HUSTLE_HUNGRY_RATE } = await import(base + 'content.js');
+const { reputation, bumpReputation, repDelta, isGameOver, runSummary, FAIL_REASONS } = await import(base + 'run.js');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -22,6 +24,12 @@ const ok = (name, cond, extra = '') => {
 };
 const text = r => (typeof r === 'string' ? r : r.text);
 const refused = r => typeof r === 'object' && r.refused === true;
+// pulls the KES amount out of a hustle line so the pay rate can be compared
+const earnOf = r => {
+  const t = text(r) || '';
+  const m = t.match(/earned KES ([\d,]+)/);
+  return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0;
+};
 
 function fresh(type = 'omo') {
   state.type = type;
@@ -33,6 +41,7 @@ function fresh(type = 'omo') {
   state.hygiene = 60; state.social = 50; state.happiness = 70;
   state.rentDueDay = 6; state.missedRent = 0;
   state.slots = DAY_SLOTS; state.restedToday = false;
+  state.reputation = 50; state.gameOver = null;
   state.eventLog = []; state.npcs = defaultNpcState();
 }
 
@@ -78,7 +87,64 @@ state.hunger = 0; state.money = 0;
 ok('side hustle still open when broke and starving', !refused(actionMap.side_hustle()));
 ok('so a starving player can always earn', state.money > 0, `${state.money}`);
 
-console.log('\n[4] Pay balance (the inversion fix)');
+console.log('\n[4] Hunger is a real cost, not just a gate');
+ok('the penalty ladder is defined', Array.isArray(HUNGER_PENALTY) && HUNGER_PENALTY.length === 3);
+ok('starving costs the most', HUNGER_PENALTY[0].energy > HUNGER_PENALTY[1].energy &&
+                                 HUNGER_PENALTY[1].energy > HUNGER_PENALTY[2].energy);
+ok('well-fed days cost nothing', hungerPenalty({ hunger: 60 }) === null);
+ok('hungry days cost energy', hungerPenalty({ hunger: 20 }).energy > 0);
+ok('starving costs the most of all', hungerPenalty({ hunger: 0 }).energy > hungerPenalty({ hunger: 20 }).energy);
+
+fresh();
+state.hunger = 0; state.energy = 50;
+setRng(() => rollFor('landlord'));            // an event with no energy effect
+const starveE0 = state.energy;
+const hungerLines = advanceDay(state);
+ok('starving applies the overnight energy cost', state.energy === starveE0 - HUNGER_PENALTY[0].energy - 10,
+   `energy ${starveE0}->${state.energy}`);
+ok('the cost is announced', hungerLines.some(l => l.text.includes('starving')), JSON.stringify(hungerLines.map(l => l.text)));
+
+fresh();
+state.hunger = 60; state.energy = 50;
+setRng(() => rollFor('landlord'));
+advanceDay(state);
+ok('a fed player pays no hunger cost', state.energy === 40, `${state.energy}`);
+
+// hunger is in the mood formula: starving cannot be cheerful
+fresh();
+state.hunger = 0; state.energy = 60; state.social = 60; state.fun = 60; state.hygiene = 60;
+recomputeHappiness(state);
+const starvingMood = state.happiness;
+fresh();
+state.hunger = 100; state.energy = 60; state.social = 60; state.fun = 60; state.hygiene = 60;
+recomputeHappiness(state);
+const fedMood = state.happiness;
+ok('hunger is part of mood', fedMood > starvingMood, `${starvingMood} vs ${fedMood}`);
+ok('happiness still lands in range', starvingMood >= 0 && starvingMood <= 100 && fedMood <= 100);
+ok('a starving player loses mood', fedMood - starvingMood >= 4, `delta ${fedMood - starvingMood}`);
+
+// and it recovers when you eat
+fresh();
+state.hunger = 0;
+recomputeHappiness(state);
+const beforeEat = state.happiness;
+actionMap.eat_ugali();
+recomputeHappiness(state);
+ok('eating lifts mood back up', state.happiness > beforeEat, `${beforeEat} -> ${state.happiness}`);
+
+// hustling on an empty stomach pays less
+fresh();
+state.hunger = 50;
+let fed = 0, fedN = 20;
+for (let i = 0; i < fedN; i++) fed += earnOf(actionMap.side_hustle());
+fresh();
+state.hunger = 0;
+let starved = 0;
+for (let i = 0; i < fedN; i++) starved += earnOf(actionMap.side_hustle());
+ok(`hustling hungry pays less (${starved} vs ${fed})`, starved < fed, `${starved} vs ${fed}`);
+ok('the rate is the documented one', Math.round(HUSTLE_HUNGRY_RATE * 100) === 60);
+
+console.log('\n[5] Pay balance (the inversion fix)');
 const ratios = [];
 for (const [k, a] of Object.entries(archetypes)) {
   if (a.rent === 0) continue;
@@ -92,39 +158,80 @@ ok(`no archetype is wildly harder (spread ${spread.toFixed(2)}x)`, spread <= 1.6
 ok('lapo start raised to 2,500', archetypes.lapo.money === 2500, `${archetypes.lapo.money}`);
 ok('lapo pay still the lowest', Object.values(archetypes).every(a => a.pay >= archetypes.lapo.pay));
 
-console.log('\n[5] Eviction');
+console.log('\n[5] The rent ladder: warn, then a grace cycle, then eviction');
 fresh();
 state.rentDueDay = 1; state.money = 0;
 let lines = advanceDay(state);
-ok('first miss warns', lines.some(l => l.text.includes('EVICTION RISK')), JSON.stringify(lines.map(l => l.text)));
-ok('first miss does not evict', state.room === archetypes.omo.room && state.missedRent === 1);
+ok('first miss warns', lines.some(l => l.text.includes('EVICTION WARNING')), JSON.stringify(lines.map(l => l.text)));
+ok('first miss does NOT end the run', !isGameOver(state), `${state.gameOver}`);
+ok('first miss leaves the room alone', state.room === archetypes.omo.room);
+ok('grace cycle: the next rent date is set', state.rentDueDay === 6, `${state.rentDueDay}`);
+
+// miss again with no money -> the run is over
 state.rentDueDay = 1; state.money = 0;
 lines = advanceDay(state);
-ok('second miss evicts', lines.some(l => l.text.includes('EVICTED')), JSON.stringify(lines.map(l => l.text)));
-ok('room downgraded', state.room === EVICTED_ROOM, state.room);
-ok('rent downgraded', state.rent === EVICTED_RENT, `${state.rent}`);
-ok('miss counter reset after eviction', state.missedRent === 0);
+ok('second miss logs EVICTED', lines.some(l => l.text.includes('EVICTED')), JSON.stringify(lines.map(l => l.text)));
+ok('second miss ends the run', isGameOver(state), `${state.gameOver}`);
+ok('gameOver reason is evicted', state.gameOver === 'evicted', `${state.gameOver}`);
+ok('eviction stops further days', advanceDay(state).length === 0);
+ok('no actions available once over', canAct(state) === false);
 
+// the summary the "start again" screen shows
+const sum = runSummary(state);
+ok('summary names the cause', sum.title === FAIL_REASONS.evicted.title, sum.title);
+ok('summary carries the run stats',
+   sum.day > 1 && typeof sum.rentPaid === 'number' && typeof sum.rentMissed === 'number',
+   JSON.stringify({ day: sum.day, paid: sum.rentPaid, missed: sum.rentMissed }));
+ok('summary names the archetype', sum.archetype.length > 0, sum.archetype);
+ok('summary lists the closest bond', sum.bestFriend !== null && sum.bestFriend.name.length > 0,
+   JSON.stringify(sum.bestFriend));
+
+// the grace period does its job when it is used
 fresh();
 state.rentDueDay = 1; state.money = 0;
 advanceDay(state);
+ok('strike recorded', state.missedRent === 1, `${state.missedRent}`);
 state.rentDueDay = 1; state.money = 50000;
 lines = advanceDay(state);
-ok('paying clears the miss counter', state.missedRent === 0, `${state.missedRent}`);
-// Assert on the log line, not the balance: a random event can also move money that turn.
+ok('paying during grace clears the strike', state.missedRent === 0, `${state.missedRent}`);
 ok('paying charges the current rent',
-   lines.some(l => l.text.includes(`RENT PAID: KES ${archetypes.omo.rent.toLocaleString()}`)),
+   lines.some(l => l.text.includes(`RENT PAID: KES ${state.rent.toLocaleString()}`)),
    JSON.stringify(lines.map(l => l.text)));
-ok('no eviction when paid', !lines.some(l => l.text.includes('EVICTED')));
+ok('no eviction when paid', !isGameOver(state));
+
+console.log('\n[6] Reputation is the second way a run ends');
+fresh();
+ok('reputation starts at 50', reputation(state) === 50, `${reputation(state)}`);
+ok('reputation is not fatal at 1', !isGameOver(state));
+bumpReputation(-49, state);
+ok('reputation tracks the change', reputation(state) === 1, `${reputation(state)}`);
+bumpReputation(-1, state);
+ok('reputation at zero ends the run', isGameOver(state), `${state.gameOver}`);
+ok('gameOver reason is reputation', state.gameOver === 'reputation', `${state.gameOver}`);
+ok('reputation is clamped to 0', reputation(state) === 0);
 
 fresh();
-state.rent = EVICTED_RENT; state.rentDueDay = 1; state.money = 50000;
-const linesEv = advanceDay(state);
-ok('after eviction the lower rent is what gets charged',
-   linesEv.some(l => l.text.includes(`RENT PAID: KES ${EVICTED_RENT.toLocaleString()}`)),
-   JSON.stringify(linesEv.map(l => l.text)));
+ok('non-Nepo archetypes have no daily drain', repDelta(state) === 0, `${repDelta(state)}`);
+state.type = 'nepo';
+ok('Nepo has a daily reputation drain', repDelta(state) === 2, `${repDelta(state)}`);
+const rep0 = reputation(state);
+const drainLines = advanceDay(state);
+// A random event can also move reputation that day, so assert the direction and
+// the announcement rather than an exact figure.
+ok('Nepo loses reputation overnight', reputation(state) < rep0, `${rep0} -> ${reputation(state)}`);
+ok('the drain is announced', drainLines.some(l => l.text.includes('family is talking')),
+   JSON.stringify(drainLines.map(l => l.text)));
+ok('but it takes many days to fall', !isGameOver(state));
 
-console.log('\n[6] Relationship decay');
+fresh();
+state.type = 'nepo';
+state.reputation = 1;
+setRng(rollFor('landlord'));
+const fatalLines = advanceDay(state);
+ok('hitting zero during a day ends the run', state.gameOver === 'reputation', `${state.gameOver}`);
+ok('the end is announced', fatalLines.some(l => l.text.includes('name is mud')), JSON.stringify(fatalLines.map(l => l.text)));
+
+console.log('\n[7] Relationship decay');
 fresh();
 const shiro = state.npcs.shiro;
 shiro.rel = 60; shiro.lastContact = 1;

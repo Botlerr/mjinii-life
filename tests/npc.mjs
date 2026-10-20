@@ -11,6 +11,7 @@ const npcMod = await import('../src/npcs.js');
 const { visitNpc, giftNpc, tierOf, clampRel, npcState, relationship, maybeNpcEvent, VISIT_ENERGY } = npcMod;
 const { npcs, gifts } = await import('../src/content.js');
 const { advanceDay } = await import('../src/turn.js');
+const { setRng } = await import('../src/rng.js');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -19,8 +20,14 @@ const ok = (name, cond, extra = '') => {
 };
 
 // Deterministic randomness for perk tests.
-const realRandom = Math.random;
-const withRandom = (v, fn) => { Math.random = () => v; try { return fn(); } finally { Math.random = realRandom; } };
+// Cover BOTH random sources: visitNpc still rolls Math.random for perks, while
+// maybeNpcEvent uses the shared injected rng.
+const withRandom = (v, fn) => {
+  const prev = Math.random;
+  Math.random = () => v;
+  setRng(() => v);
+  try { return fn(); } finally { Math.random = prev; setRng(null); }
+};
 
 function freshNpcs() {
   state.npcs = defaultNpcState();
@@ -164,13 +171,20 @@ ok('reset() clears the save', !hasSave());
 console.log('\n[11] NPC events flow through advanceDay');
 freshNpcs();
 state.npcs.shiro.rel = 60;
-state.rentDueDay = 5;
+// Pin the dice: 0.1 always passes the 0.35 check-in chance and always lands on the
+// same event, so this asserts the mechanic rather than the lottery. Money is topped
+// up each day because an unpaid rent cycle would end the run early.
+setRng(() => 0.1);
 let npcLines = 0;
 for (let i = 0; i < 100; i++) {
+  state.money = 100000;
+  state.rentDueDay = 5;
+  state.npcs.shiro.lastContact = state.day;   // stay in touch so decay cannot end the friendship
   const lines = advanceDay(state);
   npcLines += lines.filter(l => l.text.includes('checks in')).length;
 }
-ok(`NPC events appear across 100 days (got ${npcLines})`, npcLines > 10, `${npcLines}`);
+ok(`NPC events fire every day when a Friend is around (got ${npcLines})`, npcLines === 100, `${npcLines}`);
+setRng(null);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

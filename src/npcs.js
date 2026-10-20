@@ -1,6 +1,7 @@
 // src/npcs.js — interactive NPC system: relationships, visits, gifts, perks, decay
 import { state } from './state.js';
 import { npcs, gifts } from './content.js';
+import { chance, pick } from './rng.js';
 
 export const TIERS = [
   { min: 75, key: 'close',   label: 'Close' },
@@ -155,8 +156,8 @@ export function giftNpc(id, giftId) {
 // Friends and family reach out on their own once the relationship is real.
 export function maybeNpcEvent() {
   const close = npcs.filter(n => npcState(n.id).rel >= 50);
-  if (!close.length || Math.random() > 0.35) return null;
-  const npc = close[Math.floor(Math.random() * close.length)];
+  if (!close.length || !chance(0.35)) return null;
+  const npc = pick(close);
   state.social = Math.min(100, state.social + 8);
   return { text: `${npc.name} checks in out of nowhere — social +8`, kind: 'event' };
 }

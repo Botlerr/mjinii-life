@@ -2,7 +2,7 @@
 // Every energy-spending action is gated on having the energy, so nothing can drive
 // the player to a dead stop. Rest is deliberately never gated: it is the way back.
 import { state } from './state.js';
-import { archetypes, WORK_HUNGER_MIN } from './content.js';
+import { archetypes, WORK_HUNGER_MIN, HUSTLE_HUNGER_MIN, HUSTLE_HUNGRY_RATE } from './content.js';
 
 const clamp = (v, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
 const refuse = text => ({ text, kind: 'info', refused: true });
@@ -21,13 +21,16 @@ export function doWork() {
 }
 
 export function doSideHustle() {
-  // Deliberately open to a broke, hungry player — the way back from the edge.
+  // Deliberately open to a broke, hungry player — the way back from the edge — but
+  // an empty stomach slows you down, so you earn less until you eat.
   const tired = needEnergy(8);
   if (tired) return tired;
-  const earn = Math.floor(Math.random() * 500) + 200;
+  let earn = Math.floor(Math.random() * 500) + 200;
+  const sluggish = state.hunger < HUSTLE_HUNGER_MIN;
+  if (sluggish) earn = Math.max(50, Math.round(earn * HUSTLE_HUNGRY_RATE));
   state.money += earn;
   state.energy = clamp(state.energy - 8);
-  return `Side hustle: earned KES ${earn.toLocaleString()}`;
+  return `Side hustle: earned KES ${earn.toLocaleString()}${sluggish ? ' (you are too hungry to push hard)' : ''}`;
 }
 
 export function doEatUgali() {
